@@ -25,19 +25,38 @@
 
 ## 🏗️ 架构设计
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    AI Agent（IDE 内置）                │
-│   AGENTS.md 自动加载 → 强制读取配置与团队记忆库           │
-├──────────────┬──────────────────┬───────────────────┤
-│ .qoder/skills │ .qoder/team-memory│  config/          │
-│  技能包（10+）  │  团队记忆库（方法论） │  私有配置中心（唯一） │
-│  SKILL.md     │  01~06 主题文档    │  workspace_id/成员 │
-│  + 固化脚本    │  + local/（私有）   │  /数据库/知识库      │
-├──────────────┴──────────────────┴───────────────────┤
-│                    MCP 工具链                          │
-│  mcp-server-tapd │ dbx（数据库只读） │ weknora │ browser-use │
-└─────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Agent["🤖 AI Agent（IDE 内置）<br/>AGENTS.md 自动加载 → 强制读取配置与团队记忆库"]
+
+    subgraph Core["核心资产（三层沉淀）"]
+        S["📦 .qoder/skills<br/>技能包（10+）<br/>SKILL.md + 固化脚本"]
+        M["🧠 .qoder/team-memory<br/>团队记忆库<br/>01~06 主题文档"]
+        C["🔒 config/<br/>私有配置中心<br/>workspace_id / 数据库 / 知识库"]
+    end
+
+    subgraph MCP["MCP 工具链"]
+        T["mcp-server-tapd"]
+        D["dbx（数据库只读）"]
+        W["weknora-knowledge"]
+        B["browser-use"]
+    end
+
+    Agent --> S
+    Agent --> M
+    Agent --> C
+
+    Core --> T
+    Core --> D
+    Core --> W
+    Core --> B
+
+    classDef agent fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B
+    classDef core fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
+    classDef mcp fill:#F9FAFB,stroke:#9CA3AF,color:#374151
+    class Agent agent
+    class S,M,C core
+    class T,D,W,B mcp
 ```
 
 三层沉淀，越用越聪明：

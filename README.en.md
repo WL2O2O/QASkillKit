@@ -59,18 +59,38 @@ test 1019311             ← Run UI automation for that requirement
 
 ## 🏗️ Architecture
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                    AI Agent (IDE built-in)                   │
-│   AGENTS.md auto-loaded → enforces config + team-memory      │
-├──────────────┬──────────────────┬──────────────────────────┤
-│ .qoder/skills │ .qoder/team-memory│  config/               │
-│  SKILL.md     │  01~06 docs (shared) │  Private config only  │
-│  + scripts    │  + local/ (private)  │  (.gitignored)        │
-├──────────────┴──────────────────┴──────────────────────────┤
-│                    MCP Toolchain                           │
-│  mcp-server-tapd │ dbx │ weknora │ browser-use             │
-└────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Agent["🤖 AI Agent (IDE built-in)<br/>AGENTS.md auto-loaded → enforces config + team-memory"]
+
+    subgraph Core["Core Assets (Three Layers)"]
+        S["📦 .qoder/skills<br/>Skill pack (10+)<br/>SKILL.md + scripts"]
+        M["🧠 .qoder/team-memory<br/>Team memory<br/>01~06 topic docs"]
+        C["🔒 config/<br/>Private config hub<br/>workspace_id / DB / knowledge bases"]
+    end
+
+    subgraph MCP["MCP Toolchain"]
+        T["mcp-server-tapd"]
+        D["dbx (read-only DB)"]
+        W["weknora-knowledge"]
+        B["browser-use"]
+    end
+
+    Agent --> S
+    Agent --> M
+    Agent --> C
+
+    Core --> T
+    Core --> D
+    Core --> W
+    Core --> B
+
+    classDef agent fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B
+    classDef core fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
+    classDef mcp fill:#F9FAFB,stroke:#9CA3AF,color:#374151
+    class Agent agent
+    class S,M,C core
+    class T,D,W,B mcp
 ```
 
 Three layers that compound in value:
