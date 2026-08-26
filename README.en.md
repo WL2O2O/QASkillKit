@@ -40,7 +40,7 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/{your-org}/QASkillKit.git && cd QASkillKit
+git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 
 # 2. Configure MCP services (tapd required, others optional)
 
