@@ -63,7 +63,7 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/{你的组织}/QASkillKit.git && cd QASkillKit
+git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 
 # 2. 在 IDE 中配置好 MCP 服务（tapd 必需，其余按需）
 
