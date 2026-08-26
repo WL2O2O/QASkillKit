@@ -1,0 +1,38 @@
+# ===== 私有配置（开源脱敏核心）=====
+# 真实项目配置（模板 project.config.example.json 会提交）
+/config/project.config.json
+# 各端测试环境信息与实战坑点（含内网地址，模板 env-template.md 会提交）
+/.qoder/skills/uitest/references/local/
+# 项目私有团队经验（如数据库表速查）
+/.qoder/team-memory/local/
+
+# ===== 工作产物 =====
+# workspace/ 产物整体入库（生成后人工检查再提交）；仅忽略双路径归档的个人草稿副本
+/workspace/personal/drafts/
+/workspace/personal/plans/
+
+# ===== 本地开发中的 Skill（成熟后移除本规则并入库）=====
+/.qoder/skills/img-to-mermaid/
+/.qoder/skills/tseffort/
+
+# ===== 个人与临时产物 =====
+# 端到端测试产物（任意层级）
+/e2e_results/
+# OCR 测试结果文件
+system_results.txt
+# 个人工具记录（含凭证描述）
+/.workbuddy/
+# TAPD 用户信息缓存
+/user_info.json
+# 临时 OCR 验证产物
+glm-result.json
+windows-ocr-result.json
+# npm 缓存日志
+/clear/
+# 通用临时目录（任意层级，skill 临时文件优先放此）
+_tmp/
+# Node.js 依赖（任意层级）
+node_modules/
+# Python 缓存（任意层级）
+__pycache__/
+*.pyc

@@ -1,0 +1,42 @@
+{
+  "_comment": "项目私有配置模板。复制为 project.config.json 后填写真实值（该文件已被 .gitignore 忽略，不会提交）。推荐直接运行 /setup 由向导自动生成。字段含义见 config/README.md。",
+  "schema_version": "1.0",
+  "tapd": {
+    "workspace_id": "<TAPD 项目 workspace_id，如 12345678；可运行 /setup 自动获取>"
+  },
+  "team": {
+    "project_name": "<项目名称，用于验收报告表头>",
+    "project_owner": "<项目负责人姓名，用于验收报告表头>",
+    "report_editor": "<验收报告修改者姓名>",
+    "testers": ["<测试工程师姓名1>", "<测试工程师姓名2>"]
+  },
+  "database": {
+    "connection_name": "<dbx MCP 中配置的连接名>",
+    "database": "<业务数据库名，如 my_main_db>",
+    "test_tenant_id": "<测试租户 ID，无租户体系可留空>",
+    "conventions": [
+      "<业务数据查询约定，逐条列出，如：统计会员数量时 WHERE 须加 temp_user = 0 排除临时会员>"
+    ],
+    "domain_keywords": {
+      "<英文表名关键词>": "<对应中文业务含义，如 head: 门店>"
+    }
+  },
+  "knowledge_bases": [
+    {
+      "domain": "<业务域，如 供应链>",
+      "name": "<知识库名称>",
+      "id": "<weknora 知识库 UUID>"
+    }
+  ],
+  "product": {
+    "clients": ["<产品各端名称，如 PC后台、H5商城、App，用于报告按端归类>"]
+  },
+  "archive": {
+    "formal_testcase_dir": "workspace/testcases/{迭代}",
+    "draft_testcase_dir": "workspace/personal/drafts/{迭代}",
+    "bug_dir": "workspace/bugs/{迭代}/{测试人员}",
+    "report_dir": "workspace/reports",
+    "weekly_dir": "workspace/personal/weekly",
+    "image_cache_dir": "workspace/personal/image-cache/{需求ID}"
+  }
+}
