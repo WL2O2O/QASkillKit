@@ -30,6 +30,7 @@
 | [04-testcase-standard.md](04-testcase-standard.md) | 测试用例命名、头部结构、分类组织、双端复用、归档规范 | mcpcase |
 | [05-report-and-effort.md](05-report-and-effort.md) | 周报统计规则、测试工时评估规范（上限 2.5h） | weekly-report（工时规则供 tseffort 使用，tseffort 本地开发中） |
 | [06-acceptance-report.md](06-acceptance-report.md) | 验收报告固定项目信息、提测/缺陷统计口径、固化脚本清单与坑点 | acceptance-report |
+| [07-tapd-attachment-upload.md](07-tapd-attachment-upload.md) | TAPD 需求附件上传 7 步工作流（browser-use，3 层隐藏控件处理） | mcpcase / uitest |
 | `local/`（可选） | 团队私有知识（如业务表速查 `db-tables.md`），**.gitignore 排除不入库**，各团队自行维护 | mcpcase 等 |
 
 ## 维护日志
@@ -48,3 +49,4 @@
 | 2026-08-11 | 创建项目根 `AGENTS.md`：强制 agent 每次对话前通读 team-memory，跨 IDE 兼容（Qoder/Claude Code/通用 AGENTS.md 规范）；README 顶部新增"对 Agent 的强制要求"段作为双轨保障；team-memory/06 中间数据目录从"项目根 _tmp"修正为"skill 级目录 _tmp"与 acceptance-report SKILL.md 对齐 |
 | 2026-08-26 | 开源脱敏改造：私有信息（workspace_id/团队成员/数据库/知识库）统一迁入 `config/project.config.json`（gitignore）；新增 `team-memory/local/`、`uitest/references/local/` 私有目录；全部 SKILL.md 改为从配置读取，配置缺失时提示 `/setup` 不中断流程 |
 | 2026-08-26 | 删除 `ai-testcase-design`（非本人产出）；`img-to-mermaid`、`tseffort` 取消入库（本地开发中，.gitignore 排除，成熟后移除规则重新入库）；相关文档引用同步清理 |
+| 2026-08-27 | 新增 07-tapd-attachment-upload.md：TAPD 需求附件上传 7 步标准工作流（S93 九需求 9/9 验证），沉淀 3 层隐藏控件（+ 按钮 visibility / panel 屏幕外定位 / upload-input display:none）处理方法与 `sort:不允许为空` 坑点解法；01 新增 PC后台测试账号规则（账号统一原则：统一主账号，完整账号清单为私有信息存 `local/test-accounts.md` 不入库） |

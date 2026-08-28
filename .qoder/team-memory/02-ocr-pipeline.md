@@ -83,11 +83,15 @@ python ocr_extract.py "图片.png" --split --json-blocks    # 超大图切块
   - 官方免费文档：https://docs.bigmodel.cn/cn/guide/models/free/glm-4v-flash
 - **未配置时自动降级**：跳过 GLM 仅用 Read，不阻塞流程；对话中输出配置引导模板
 
-## 颜色标记识别规则
+## 颜色标记识别规则（彩色标记+删除线识别）
 
-- 需求图片中**红色（或高亮色）标记的内容才是本次需求变更点**，未标记颜色视为背景参考，不得为其编写用例
-- Read 识别颜色标记区域，OCR 提取对应精确文案，交叉验证
-- 多色标记以红色为主，其他色标记为待确认项
+- 需求图片（尤其是注释面板）中，**有颜色标记的文字（红/蓝/橙/紫/绿等与背景可区分的彩色）是需求正相关内容**（用例核心依据，不限于红色）；**黑色/灰色背景文字多为上下文参考**（用于理解语境，一般不为其编写用例；但含明确业务规则——字段约束/枚举选项/数值限制——时须按兜底判断流程确认后编写）
+- **全黑图片兜底**：整张图无彩色标记时推断为新功能，基于全部注释文本编写用例
+- **删除线文字**：表示功能已移除，不得编写用例
+- 注释面板特殊处理：彩色标注（字段约束/状态流转/操作结果）→ 必须写用例；黑色说明（操作流程/示例数据/通用说明/面板标题）→ 不独立编写；删除线 → 排除
+- Read 识别颜色标记区域（输出需标注区域颜色属性，含删除线区域），OCR 提取对应精确文案，交叉验证
+- 无法区分颜色时按「5 步兜底判断流程」（TAPD 原文 → Spec 文档 → 知识库查询 → dbx 表结构 → 待确认）处理，以 TAPD 描述为准
+- 详细规则见 `.qoder/skills/ocr/SKILL.md`「颜色标记识别规则（彩色标记+删除线识别）」，mcpcase / case-review 调用 OCR 结果时必读并按彩色标记分层处理
 
 ## 兜底策略
 
@@ -96,6 +100,7 @@ python ocr_extract.py "图片.png" --split --json-blocks    # 超大图切块
 ## 临时文件清理规范
 
 - **需求图片缓存**：mcpcase 生成用例后**默认保留** `workspace/personal/image-cache/{需求ID}/` 下的图片（与 case-review 缓存策略一致，生成→核查复用同一批图，避免重复下载；缓存截图随仓库入库，**提交前请人工检查是否含敏感内容**）；确需释放空间时手动删除该目录或要求 AI 清理
+- **缓存一致性校验（防同名覆盖盲区）**：TAPD 同名图片内容被更新时（URL/文件名不变），按 basename 复用会静默用旧图。对策：下载统一走 `case-review/scripts/download_images.js`（自动写 `.manifest.json` 记录 md5/size/cached_at）；case-review 复用前调 `get_image` 拿实时链接后执行 `--verify` 模式（Range 请求头比对 Content-Length），OK 复用 / CHANGED、UNKNOWN 重下；缓存超 7 天或用户指定 `--refresh` 时强制重下
 - **OCR 临时切片**：`ocr_extract.py` 使用 `tempfile.gettempdir()` 系统临时目录，由系统自动回收，不占用项目空间
 - **通用原则**：所有 skill 产生的临时文件优先写入已被 .gitignore 排除的目录（如 `_tmp/`、`workspace/personal/drafts/`），流程末尾按需清理（需求图片缓存默认保留，见上）；测试用例、周报等交付物写入 `workspace/` 对应归档目录保留
 - **DeleteFile 删除后验证**：DeleteFile 返回成功后 Glob 仍可能显示文件存在（索引缓存滞后，实际已删）；以 PowerShell `Get-ChildItem -Filter` 或 `Test-Path` 实测为准，勿据此重复删除或误判清理失败

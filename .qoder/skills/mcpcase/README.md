@@ -92,7 +92,7 @@
 
 ## 协作要点
 
-1. **图片缓存共享**：mcpcase 生成的图片默认保留在 `workspace/personal/image-cache/{需求ID}/`；case-review 会**按 TAPD 原始文件名**自动匹配复用，避免重复下载
+1. **图片缓存共享**：mcpcase 生成的图片默认保留在 `workspace/personal/image-cache/{需求ID}/`（含 `.manifest.json` 清单）；case-review 会**按 TAPD 原始文件名**自动匹配复用，复用前通过 manifest + 实时图 Content-Length 校验一致性（防同名覆盖盲区），`--refresh` 可强制重下
 2. **双路径同步**：mcpcase 生成的用例归档到两份（个人副本 + 正式目录），case-review 修改时也同步两份并以 md5 校验
 3. **团队记忆库强制读取**：本 skill 在执行前会先读 `.qoder/team-memory/04-testcase-standard.md` 等规范文件，遵循团队沉淀的标准
 4. **统一通过 `/ocr` skill 识图**：mcpcase/case-review 都自动调用 `/ocr`，成员不需要会主动调用 `/ocr`，识图细节（三轨协同、置信度、兜底）由 /ocr 统一负责
