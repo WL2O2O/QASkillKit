@@ -11,7 +11,7 @@
 | `README.md` | ✅ 提交 | 本说明文档 |
 
 > 除本目录外，还有两处 gitignore 的本地私有文档目录：
-> - `.qoder/skills/uitest/references/local/` — 各端测试环境信息与实战坑点（含内网地址）
+> - `.qoder/skills/ui-automation/references/local/` — 各端测试环境信息与实战坑点（含内网地址）
 > - `.qoder/team-memory/local/` — 项目私有的团队经验（如数据库常用表速查）
 
 ## 字段说明
@@ -35,7 +35,7 @@
 
 | 字段 | 说明 | 使用方 |
 |:---|:---|:---|
-| `connection_name` | dbx MCP 连接名 | mcpcase / uitest 等查询真实测试数据 |
+| `connection_name` | dbx MCP 连接名 | testcase-generator / ui-automation 等查询真实测试数据 |
 | `database` | 业务数据库名 | 同上 |
 | `test_tenant_id` | 测试租户 ID（可空） | 数据隔离确认 |
 | `conventions` | 业务数据查询约定（逐条自然语言） | 生成 SQL / 统计口径时遵循 |
@@ -64,7 +64,7 @@ weknora 知识库清单（`domain` 业务域 / `name` 名称 / `id` UUID）。sk
 | `orange` | 尚未实现的逻辑或他人并行修改标注 |
 
 > **使用说明**：
-> - skill（ocr / mcpcase / case-review）识图时从 `config/project.config.json` 读取本配置解释颜色，**不依赖固定颜色规则**
+> - skill（ocr / testcase-generator / testcase-reviewer）识图时从 `config/project.config.json` 读取本配置解释颜色，**不依赖固定颜色规则**
 > - 未配置时按默认图例处理（不中断流程），并提示用户运行 `/setup` 或手动补充配置
 > - 各团队若颜色规范不同（如蓝色代替紫色、颜色含义不同），修改本配置即可，无需改动 skill
 
@@ -84,7 +84,7 @@ weknora 知识库清单（`domain` 业务域 / `name` 名称 / `id` UUID）。sk
 workspace/
 ├── personal/                    # 个人工作产物
 │   ├── drafts/{迭代}/           # 草稿用例（双路径之一）
-│   ├── image-cache/{需求ID}/    # 需求图片缓存（供 case-review 复用，提交前人工检查）
+│   ├── image-cache/{需求ID}/    # 需求图片缓存（供 testcase-reviewer 复用，提交前人工检查）
 │   ├── weekly/                  # 周报
 │   └── specs/                   # 需求规格说明
 ├── testcases/{迭代}/            # 正式归档用例（双路径之二）

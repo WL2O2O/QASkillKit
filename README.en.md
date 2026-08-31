@@ -12,16 +12,16 @@
 
 ## ✨ What It Does
 
-| Area | Skill | How to Invoke | Description |
-|:---|:---|:---|:---|
-| 📝 Test Case Design | `mcpcase` | Input a TAPD requirement ID (e.g. `1019311`) | Fetches requirements from TAPD, queries real test data from DB, supplements business context from knowledge base, and OCRs prototype images to generate structured test cases. |
-| 🔍 Case Review | `case-review` | `review 1019311` | Compares test cases against prototype images line by line; directly fixes confirmed mismatches, outputs a pending-confirmation report for ambiguous items. |
-| 🖥️ UI Automation | `uitest` | `test 1019311` | Drives browser via browser-use MCP to execute Web-based test cases; groups and merges related cases, logs results back into case files. |
-| 🐞 Defect Reports | `ai-testbug` | Describe the bug | Writes standardized defect documents following the team's defect template (title, preconditions, steps, actual/expected results). |
-| 📊 Acceptance Reports | `acceptance-report` (/ys) | `generate s92 acceptance report` | Requirement/defect statistics, delayed-delivery lists, developer defect distribution; scripts connect directly to TAPD OpenAPI. |
-| 📅 Weekly Reports | `weekly-report` (/zb) | `write weekly report` | Pulls requirement/defect updates from TAPD for the current week, generates a structured weekly report. |
-| 🖼️ OCR | `ocr` | Called by other skills automatically | Three-channel cross-validated OCR: Windows OCR (coverage) + OpenOCR (precision) + VLM (structure). |
-| ⚙️ Setup Wizard | `setup` (/setup) | `/setup` on first use | Auto-detects TAPD project, DB connections, knowledge bases; generates private config. |
+| Area | Skill | Alias / Shortcut | How to Invoke | Description |
+|:---|:---|:---|:---|:---|
+| 📝 Test Case Design | `testcase-generator` | — | Input a TAPD requirement ID (e.g. `1019311`) | Fetches requirements from TAPD, queries real test data from DB, supplements business context from knowledge base, and OCRs prototype images to generate structured test cases. |
+| 🔍 Case Review | `testcase-reviewer` | — | `review 1019311` | Compares test cases against prototype images line by line; directly fixes confirmed mismatches, outputs a pending-confirmation report for ambiguous items. |
+| 🖥️ UI Automation | `ui-automation` | — | `test 1019311` | Drives browser via browser-use MCP to execute Web-based test cases; groups and merges related cases, logs results back into case files. |
+| 🐞 Defect Reports | `defect-logger` | — | Describe the bug | Writes standardized defect documents following the team's defect template (title, preconditions, steps, actual/expected results). |
+| 📊 Acceptance Reports | `acceptance-report` | `/ys` | `generate s92 acceptance report` | Requirement/defect statistics, delayed-delivery lists, developer defect distribution; scripts connect directly to TAPD OpenAPI. |
+| 📅 Weekly Reports | `weekly-report` | `/zb` | `write weekly report` | Pulls requirement/defect updates from TAPD for the current week, generates a structured weekly report. |
+| 🖼️ OCR | `ocr` | — | Called by other skills automatically | Three-channel cross-validated OCR: Windows OCR (coverage) + OpenOCR (precision) + VLM (structure). |
+| ⚙️ Setup Wizard | `setup` | `/setup` | `/setup` on first use | Auto-detects TAPD project, DB connections, knowledge bases; generates private config. |
 
 ## 🚀 Quick Start
 
@@ -32,7 +32,7 @@
 | [Qoder](https://qoder.com/) (or any IDE supporting AGENTS.md) | Runs agents & skills | ✅ Required |
 | MCP: `mcp-server-tapd` | TAPD read/write | ✅ Required |
 | MCP: `dbx` | DB read-only queries for real test data | Recommended |
-| MCP: `browser-use` | UI automation | Required for uitest |
+| MCP: `browser-use` | UI automation | Required for ui-automation |
 | MCP: `weknora-knowledge` | Business knowledge base | Optional |
 | Python 3 + Node.js ≥ 18 | Utility scripts / OCR | ✅ Required |
 
@@ -51,7 +51,7 @@ git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 After `/setup` generates `config/project.config.json` (gitignored), you're ready:
 
 ```
-/mcpcase 1019311        ← Generate test cases for TAPD requirement 1019311
+/testcase-generator 1019311   ← Generate test cases for TAPD requirement 1019311
 test 1019311             ← Run UI automation for that requirement
 /ys generate s92 report ← Generate acceptance report
 /zb                     ← Generate this week's report
@@ -115,7 +115,7 @@ All private info is managed through three gitignore zones:
 |:---|:---|:---|
 | `config/project.config.json` | TAPD workspace_id, team members, DB connections, knowledge UUIDs | 🚫 Ignored (template `project.config.example.json` checked in) |
 | `.qoder/team-memory/local/` | Team-private knowledge (e.g. table lookups) | 🚫 Ignored |
-| `.qoder/skills/uitest/references/local/` | Environment addresses, account rules, pitfalls | 🚫 Ignored (template `env-template.md` checked in) |
+| `.qoder/skills/ui-automation/references/local/` | Environment addresses, account rules, pitfalls | 🚫 Ignored (template `env-template.md` checked in) |
 
 Credentials (TAPD token, API keys) never enter config files — tokens from MCP config, keys from environment variables. Passwords are "ask each time, never record."
 
@@ -125,7 +125,7 @@ Credentials (TAPD token, API keys) never enter config files — tokens from MCP 
 ├── AGENTS.md                    # Global agent instructions (auto-loaded)
 ├── config/                      # Private config center (template committed, real config gitignored)
 ├── .qoder/
-│   ├── skills/                  # Skills (setup/mcpcase/uitest/acceptance-report/...)
+│   ├── skills/                  # Skills (setup/testcase-generator/ui-automation/acceptance-report/...)
 │   │   └── {skill}/SKILL.md     #   Each skill has a complete procedure + scripts/
 │   └── team-memory/             # Team memory (01~06 topic docs + local/ private)
 ├── examples/                    # Desensitized examples (fictional case format samples)

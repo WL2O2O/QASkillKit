@@ -34,7 +34,7 @@
 
 ## Skill 健壮性原则
 
-- 任何 skill 都不应硬性依赖其他 skill（如 `/mcpcase` 不应依赖 `/ocr`）；需图像能力时**直接调用** `.qoder/skills/ocr/scripts/` 下的脚本，不通过 skill 命令转发
+- 任何 skill 都不应硬性依赖其他 skill（如 `/testcase-generator` 不应依赖 `/ocr`）；需图像能力时**直接调用** `.qoder/skills/ocr/scripts/` 下的脚本，不通过 skill 命令转发
 - SKILL.md 可选择在执行步骤开头重复本规则（以防 agent 未加载 AGENTS.md），但不强制
 
 ## 项目根目录
@@ -42,7 +42,7 @@
 - 工作区根目录：`./`（路径以本文件所在目录为基准）
 - 项目配置中心：`config/`（`project.config.json` 真实配置不入库，`project.config.example.json` 模板入库）
 - 团队记忆库：`.qoder/team-memory/`（其中 `local/` 子目录为团队私有，不入库）
-- 本地 Skill：`.qoder/skills/`（其中 `uitest/references/local/` 为团队私有，不入库）
+- 本地 Skill：`.qoder/skills/`（其中 `ui-automation/references/local/` 为团队私有，不入库）
 - 临时文件：`_tmp/`（项目根，已被 `.gitignore` 忽略）
 - 个人工作产物：`workspace/personal/`（仅 `drafts/` 草稿副本被 `.gitignore` 排除，其余入库）
 - 正式归档：`workspace/testcases/{迭代}/`（姓名子目录由用户自建）

@@ -1,5 +1,5 @@
 ---
-name: uitest
+name: ui-automation
 description: >
   基于 browser-use MCP 的 TAPD 需求 UI 自动化测试 Skill，仅适用于需求涉及网页端操作
   （PC后台/总后台/H5商城）的场景。根据用户提供的需求 ID 自动搜索对应用例文件，
@@ -52,7 +52,7 @@ description: >
    - 个人草稿：`workspace/personal/drafts/{迭代}/`
 2. 多个匹配时：优先正式归档目录中"实际结果"列未回填（最近生成）的文件；
    无法确定时列出全部让用户确认。
-3. 找不到用例文件 → 提示用户先用 `/mcpcase` 生成用例，停止执行。
+3. 找不到用例文件 → 提示用户先用 `/testcase-generator` 生成用例，停止执行。
 
 ## 第三步：解析用例表
 

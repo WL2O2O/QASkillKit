@@ -25,12 +25,12 @@
 | 文件 | 主题 | 适用 Skill |
 |:---|:---|:---|
 | [01-project-basics.md](01-project-basics.md) | 项目技术栈、目录结构、归档路径 | 全部 |
-| [02-ocr-pipeline.md](02-ocr-pipeline.md) | OCR 三轨协同、脚本修复经验、GLM 通道 | ocr / mcpcase |
-| [03-mcp-toolkit.md](03-mcp-toolkit.md) | TAPD / dbx / weknora MCP 调用规范与坑点、TAPD 原生 API | mcpcase / weekly-report / tseffort |
-| [04-testcase-standard.md](04-testcase-standard.md) | 测试用例命名、头部结构、分类组织、双端复用、归档规范 | mcpcase / ai-testcase-design |
+| [02-ocr-pipeline.md](02-ocr-pipeline.md) | OCR 三轨协同、脚本修复经验、GLM 通道 | ocr / testcase-generator |
+| [03-mcp-toolkit.md](03-mcp-toolkit.md) | TAPD / dbx / weknora MCP 调用规范与坑点、TAPD 原生 API | testcase-generator / weekly-report / tseffort |
+| [04-testcase-standard.md](04-testcase-standard.md) | 测试用例命名、头部结构、分类组织、双端复用、归档规范 | testcase-generator / ai-testcase-design |
 | [05-report-and-effort.md](05-report-and-effort.md) | 周报统计规则、测试工时评估规范（上限 2.5h） | weekly-report / tseffort |
 | [06-acceptance-report.md](06-acceptance-report.md) | 验收报告固定项目信息、提测/缺陷统计口径、固化脚本清单与坑点 | acceptance-report |
-| [07-tapd-attachment-upload.md](07-tapd-attachment-upload.md) | TAPD 需求附件上传 7 步工作流（browser-use，3 层隐藏控件处理） | mcpcase / ai-testcase-design / uitest |
+| [07-tapd-attachment-upload.md](07-tapd-attachment-upload.md) | TAPD 需求附件上传 7 步工作流（browser-use，3 层隐藏控件处理） | testcase-generator / ai-testcase-design / ui-automation |
 | [08-ai-evolution.md](08-ai-evolution.md) | AI 能力进化与经验沉淀机制：主动发现问题→评估→确认后升级；坑点须固化到 Skill 强制规则 | 全部 |
 
 ## 维护日志
@@ -48,4 +48,5 @@
 | 2026-08-10 | 修复 fetch_changes.py extract_item 未处理 BugChange 包装名 + analyze_testing.py 操作人字段 author→creator；06/SKILL.md 坑点同步补充 |
 | 2026-08-11 | 创建项目根 `AGENTS.md`：强制 agent 每次对话前通读 team-memory，跨 IDE 兼容（Qoder/Claude Code/通用 AGENTS.md 规范）；README 顶部新增"对 Agent 的强制要求"段作为双轨保障；team-memory/06 中间数据目录从"项目根 _tmp"修正为"skill 级目录 _tmp"与 acceptance-report SKILL.md 对齐 |
 | 2026-08-27 | 新增 07-tapd-attachment-upload.md：TAPD 需求附件上传 7 步标准工作流（S93 九需求 9/9 验证），沉淀 3 层隐藏控件（+ 按钮 visibility / panel 屏幕外定位 / upload-input display:none）处理方法与 `sort:不允许为空` 坑点解法 |
-| 2026-08-29 | 新增 08-ai-evolution.md：AI 主动发现问题→评估升级价值→需要升级时先向用户确认；坑点记忆约束力不足，必须固化到 Skill 强制规则（案例：mcpcase 文件名安全化 + review 有据直接修正模式） |
+| 2026-08-29 | 新增 08-ai-evolution.md：AI 主动发现问题→评估升级价值→需要升级时先向用户确认；坑点记忆约束力不足，必须固化到 Skill 强制规则（案例：testcase-generator 文件名安全化 + review 有据直接修正模式） |
+| 2026-08-31 | Skill 命名规范统一（kebab-case）：mcpcase→testcase-generator、case-review→testcase-reviewer、uitest→ui-automation、ai-testbug→defect-logger；README 技能表新增「别名/快捷命令」列；目录与路径同步更新 |

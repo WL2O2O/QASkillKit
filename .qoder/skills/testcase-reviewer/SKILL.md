@@ -1,5 +1,5 @@
 ---
-name: case-review
+name: testcase-reviewer
 description: >
   对既有 TAPD 测试用例文件进行原型一致性核查与修正。给定需求 ID，自动定位双路径用例文件、
   获取 TAPD 需求与内嵌原型图、三轨协同识图、逐条比对用例与原型差异；依据明确（原型注释/
@@ -12,9 +12,9 @@ description: >
 
 ## 使用方式
 
-用户输入**纯数字**（如 `1015691`）或带前缀（如 `/case-review 1015691`）时，自动识别为需求 ID，按本 Skill 完整流程执行核查。
+用户输入**纯数字**（如 `1015691`）或带前缀（如 `/testcase-reviewer 1015691`）时，自动识别为需求 ID，按本 Skill 完整流程执行核查。
 
-> 与 mcpcase 的分工：mcpcase 负责**生成**用例，本 Skill 负责**核查**既有用例与 TAPD 需求/原型图的一致性。本 Skill 不生成新用例。
+> 与 testcase-generator 的分工：testcase-generator 负责**生成**用例，本 Skill 负责**核查**既有用例与 TAPD 需求/原型图的一致性。本 Skill 不生成新用例。
 
 ## 完整执行流程总览
 
@@ -49,7 +49,7 @@ description: >
 
 - 迭代名称（s90/s91/s92...）从 TAPD 返回的迭代信息确定，或从目录中已有文件推断
 - 读取两份文件，确认内容一致；若仅存在一份，报告中注明
-- **两份都不存在**：告知用户本 Skill 仅核查既有用例，建议先按 mcpcase 生成用例再核查（除非用户明确要求直接核查）
+- **两份都不存在**：告知用户本 Skill 仅核查既有用例，建议先按 testcase-generator 生成用例再核查（除非用户明确要求直接核查）
 
 ## 第二步：获取 TAPD 需求信息
 
@@ -64,7 +64,7 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
 - 从 description 提取：需求概述、变更点、`<img>` 图片路径列表（形如 `/tfl/captures/...`）
 - 有 `parent_id` 时，再查一次父需求（可能含补充说明）
 - 查询评论（`get_comments`）与附件（`get_entity_attachments`），可能有补充信息
-- **只分析 TAPD 描述中的内嵌图**，不扫描缓存目录里的历史图片（用户既定规则）；但缓存目录 `workspace/personal/image-cache/{需求ID}/` 中与 TAPD 描述 `<img>` **同名**的文件视为本需求缓存图，第三步**优先复用**（mcpcase 生成用例后默认保留，核查无需重复下载）
+- **只分析 TAPD 描述中的内嵌图**，不扫描缓存目录里的历史图片（用户既定规则）；但缓存目录 `workspace/personal/image-cache/{需求ID}/` 中与 TAPD 描述 `<img>` **同名**的文件视为本需求缓存图，第三步**优先复用**（testcase-generator 生成用例后默认保留，核查无需重复下载）
 
 ## 第三步：复用/下载原型图（缓存一致性校验 + 优先复用）
 
@@ -77,7 +77,7 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
 1. **判定缓存是否可复用**：缓存目录存在同名文件 **且** manifest 有该图记录 **且** 缓存未超过 7 天 **且** 未指定 `--refresh` → 候选复用；任一不满足 → 直接下载（见下）
 2. **候选复用图做实时校验**：对该图调用 `get_image` 获取实时 download_url，执行校验模式：
    ```
-   node .qoder/skills/case-review/scripts/download_images.js --verify {参数文件}
+   node .qoder/skills/testcase-reviewer/scripts/download_images.js --verify {参数文件}
    ```
    参数文件格式：`[{"url":"{download_url}","out":"{缓存目录}/{原始文件名}"}, ...]`（校验模式自动从 manifest 读取记录的 size 与实时图 Content-Length 比对，仅发 Range 请求头不下载全量）
    - 输出 `VERIFY OK` → 实时图与缓存图一致，**复用缓存**
@@ -94,7 +94,7 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
    - **每次只能请求一张**；下载链接**默认有效 300s**，超时需重新调用
 2. 将 `[{"url":"{download_url}","out":"{缓存目录}/{原始文件名}"}, ...]` 写入临时参数文件，执行：
    ```
-   node .qoder/skills/case-review/scripts/download_images.js {参数文件}
+   node .qoder/skills/testcase-reviewer/scripts/download_images.js {参数文件}
    ```
    （下载成功自动写入/更新 `.manifest.json`）
 3. 失败（链接过期/网络错误/文件过小）时：重新调用 `get_image` 刷新链接后重试
@@ -156,7 +156,7 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
 | 变更点反向映射的用例 | P0 | 逐条全量比对 |
 | 正向功能流程（未映射至变更点的） | P1 | 逐条快速比对（仅确认预期结果是否合理） |
 | 边界值测试 / 异常输入 | P2 | 抽样 30%（确认边界值是否基于原型实际限制；无明确限制的不细究） |
-| 按钮防抖 | P3 | 跳过（mcpcase 强制规范，不得删除/质疑） |
+| 按钮防抖 | P3 | 跳过（testcase-generator 强制规范，不得删除/质疑） |
 | 纯 UI 描述用例（位置/布局/颜色） | P3 | 跳过（原型图 UI 细节不作为预期依据，见 Skill 禁止规则） |
 | 空态/默认文案（原型未标注） | P3 | 跳过（原型未说明则不推断） |
 
@@ -176,7 +176,7 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
 
 **有据 vs 待确认判定标准**（核心原则：结论是否唯一）：
 - **可直接修正**：证据链完整、结论唯一——原型注释原文（OCR 双通道验证且 score≥0.7）、TAPD 描述原文、开发评论接口说明（字段名/状态值/统计口径）
-- **必须待确认**：① 原型内部两处及以上表述冲突且无法判定等价性；② OCR score<0.7 且无法以其他通道反查；③ 用例推断项原型与描述均未涉及但属业务决策（如数据源范围、权限来源）；④ 防抖用例（mcpcase 规范"防抖必测"，不得建议删除）；⑤ 空态/默认文案原型未标注
+- **必须待确认**：① 原型内部两处及以上表述冲突且无法判定等价性；② OCR score<0.7 且无法以其他通道反查；③ 用例推断项原型与描述均未涉及但属业务决策（如数据源范围、权限来源）；④ 防抖用例（testcase-generator 规范"防抖必测"，不得建议删除）；⑤ 空态/默认文案原型未标注
 
 ### 比对维度
 - 文案差异：提示语、按钮文字、弹窗标题（如"请先选择门店" vs "请选择适用门店"）
@@ -186,7 +186,7 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
 - 数值限制：字数、位数（如扫一扫截取前 40 位）、范围、条数
 - 数据源与权限控制
 - **颜色属性校验**：比对依据中彩色标注文本优先（需求正相关，红/紫及蓝/绿等其他可区分彩色；橙色先验证范围），黑色文本仅参考（含明确业务规则时核对是否覆盖）；若用例大量源自黑色说明文字，需审查是否越界；用例覆盖删除线文本对应功能时，需确认是否应修正/删除
-- 按钮防抖：依据 mcpcase 规范"按钮防抖必测"，**不得建议删除防抖用例**
+- 按钮防抖：依据 testcase-generator 规范"按钮防抖必测"，**不得建议删除防抖用例**
 - 空态：原型未说明则不推断、不补充
 
 ## 第六步：批量修正模式（先收集、后统一执行）
@@ -278,5 +278,5 @@ workspace_id={workspace_id}, options={"entity_type":"stories","id":"{需求ID}",
 ## 附加资源
 
 - OCR 详细调用：[.qoder/skills/ocr/SKILL.md](../ocr/SKILL.md)
-- 用例生成（无用例时先用它生成）：[.qoder/skills/mcpcase/SKILL.md](../mcpcase/SKILL.md)
+- 用例生成（无用例时先用它生成）：[.qoder/skills/testcase-generator/SKILL.md](../testcase-generator/SKILL.md)
 - 图片下载脚本：[scripts/download_images.js](scripts/download_images.js)

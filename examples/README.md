@@ -5,6 +5,6 @@
 
 | 文件 | 演示内容 | 对应 Skill |
 |:---|:---|:---|
-| [sample-testcase.md](sample-testcase.md) | 测试用例文件的标准结构（头部/变更点/分类用例/覆盖矩阵） | mcpcase |
+| [sample-testcase.md](sample-testcase.md) | 测试用例文件的标准结构（头部/变更点/分类用例/覆盖矩阵） | testcase-generator |
 
 格式权威源：`.qoder/team-memory/04-testcase-standard.md`（用例标准）与各 SKILL.md 的输出规范章节。

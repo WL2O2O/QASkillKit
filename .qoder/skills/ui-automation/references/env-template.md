@@ -1,6 +1,6 @@
-# uitest 端参考文档模板（初始化用）
+# ui-automation 端参考文档模板（初始化用）
 
-> **用途**：uitest 的各端参考文档（环境信息 + 实战经验沉淀）属于团队私有内容，
+> **用途**：ui-automation 的各端参考文档（环境信息 + 实战经验沉淀）属于团队私有内容，
 > 统一存放于 `references/local/`（已被 `.gitignore` 排除，不入库）。
 > 首次使用本 Skill 时，运行 `/setup` 或按本模板在 `references/local/` 下为每个网页端创建一份文档，
 > 文件名建议与端对应（如 `pc-admin.md`、`root-admin.md`、`h5-mall.md`，可按自己团队的端命名）。
@@ -10,7 +10,7 @@
 以下为单个端文档的标准结构，复制后按需填写：
 
 ```markdown
-# uitest 参考文档：{端名称}（私有，不入库）
+# ui-automation 参考文档：{端名称}（私有，不入库）
 
 > 本文件位于 `references/local/`（已被 `.gitignore` 排除），存放本团队真实环境信息与实战沉淀。
 > 本端经验持续沉淀，每次测试后按 SKILL.md「第十步」格式追加本节记录。

@@ -92,7 +92,7 @@ python ocr_extract.py "图片.png" --split --json-blocks    # 超大图切块
 - 注释面板特殊处理：彩色标注（字段约束/状态流转/操作结果）→ 必须写用例；黑色说明（操作流程/示例数据/通用说明/面板标题）→ 不独立编写；删除线 → 排除
 - Read 识别颜色标记区域（输出需标注区域颜色属性，含删除线区域），OCR 提取对应精确文案，交叉验证
 - 无法区分颜色时按「5 步兜底判断流程」（TAPD 原文 → Spec 文档 → 知识库查询 → dbx 表结构 → 待确认）处理，以 TAPD 描述为准
-- 详细规则见 `.qoder/skills/ocr/SKILL.md`「颜色标记识别规则（彩色标记+删除线识别）」，mcpcase / case-review 调用 OCR 结果时必读并按彩色标记分层处理
+- 详细规则见 `.qoder/skills/ocr/SKILL.md`「颜色标记识别规则（彩色标记+删除线识别）」，testcase-generator / testcase-reviewer 调用 OCR 结果时必读并按彩色标记分层处理
 
 ## 兜底策略
 
@@ -100,8 +100,8 @@ python ocr_extract.py "图片.png" --split --json-blocks    # 超大图切块
 
 ## 临时文件清理规范
 
-- **需求图片缓存**：mcpcase 生成用例后**默认保留** `workspace/personal/image-cache/{需求ID}/` 下的图片（与 case-review 缓存策略一致，生成→核查复用同一批图，避免重复下载；缓存截图随仓库入库，**提交前请人工检查是否含敏感内容**）；确需释放空间时手动删除该目录或要求 AI 清理
-- **缓存一致性校验（防同名覆盖盲区）**：TAPD 同名图片内容被更新时（URL/文件名不变），按 basename 复用会静默用旧图。对策：下载统一走 `case-review/scripts/download_images.js`（自动写 `.manifest.json` 记录 md5/size/cached_at）；case-review 复用前调 `get_image` 拿实时链接后执行 `--verify` 模式（Range 请求头比对 Content-Length），OK 复用 / CHANGED、UNKNOWN 重下；缓存超 7 天或用户指定 `--refresh` 时强制重下
+- **需求图片缓存**：testcase-generator 生成用例后**默认保留** `workspace/personal/image-cache/{需求ID}/` 下的图片（与 testcase-reviewer 缓存策略一致，生成→核查复用同一批图，避免重复下载；缓存截图随仓库入库，**提交前请人工检查是否含敏感内容**）；确需释放空间时手动删除该目录或要求 AI 清理
+- **缓存一致性校验（防同名覆盖盲区）**：TAPD 同名图片内容被更新时（URL/文件名不变），按 basename 复用会静默用旧图。对策：下载统一走 `testcase-reviewer/scripts/download_images.js`（自动写 `.manifest.json` 记录 md5/size/cached_at）；testcase-reviewer 复用前调 `get_image` 拿实时链接后执行 `--verify` 模式（Range 请求头比对 Content-Length），OK 复用 / CHANGED、UNKNOWN 重下；缓存超 7 天或用户指定 `--refresh` 时强制重下
 - **OCR 临时切片**：`ocr_extract.py` 使用 `tempfile.gettempdir()` 系统临时目录，由系统自动回收，不占用项目空间
 - **通用原则**：所有 skill 产生的临时文件优先写入已被 .gitignore 排除的目录（如 `_tmp/`、`workspace/personal/drafts/`），流程末尾按需清理（需求图片缓存默认保留，见上）；测试用例、周报等交付物写入 `workspace/` 对应归档目录保留
 - **DeleteFile 删除后验证**：DeleteFile 返回成功后 Glob 仍可能显示文件存在（索引缓存滞后，实际已删）；以 PowerShell `Get-ChildItem -Filter` 或 `Test-Path` 实测为准，勿据此重复删除或误判清理失败
@@ -109,5 +109,5 @@ python ocr_extract.py "图片.png" --split --json-blocks    # 超大图切块
 ## 原型图注释滞后于 TAPD 描述（核查经验）
 
 - 现象：原型图注释可能与 TAPD 描述冲突，且多为**需求变更前的旧注释**（已三次出现：1019782 图7"支持点击切换规格"为模板残留，用户确认本期不做；1019783 图3 仍写"展示'全部商品'"，而 TAPD 描述为"删除全部商品选项"，用户已确认删除，图3 为旧注释；1019739 标注 6 在 WIN 页面标注"调用 /versionConfig/uploadAPK"（应为 uploadWinSoftware）、标注 1 写"json、zip 上传至服务器 CDN 目录"（与本期前端直传 OSS 矛盾），均为旧说明残留）
-- 处理：结论不唯一时按 case-review 规范列为**待确认项**（用例暂按 TAPD 描述编写），不直接改；用户确认后再双路径同步修正
+- 处理：结论不唯一时按 testcase-reviewer 规范列为**待确认项**（用例暂按 TAPD 描述编写），不直接改；用户确认后再双路径同步修正
 - 判定提示：图1（需求来源表）通常含蓝框/红框标注的需求原始诉求，是判断新旧注释的最可靠锚点；TAPD 描述中的"业务流程（新）/影响范围"章节是判定新旧交互的权威锚点

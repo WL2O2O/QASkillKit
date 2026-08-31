@@ -3,7 +3,7 @@
 ---
 
 前置条件：
-1. 登录 PC 后台（测试地址：http://192.168.9.23/#/login）
+1. 登录 PC 后台（测试地址：<内网测试环境，见 team-memory/local/test-accounts.md>/#/login）
 2. 进入"门店-门店库存"列表（#/agent/goodsinventory）
 3. 选择一家有库存数据的门店（如 nx1002）
 

@@ -21,7 +21,7 @@
 ```
 <项目根>/   # 各成员本地路径不同，下文均相对此目录
 ├── .qoder\skills\          # 本地 skill（git 追踪，团队共享）
-│   ├── mcpcase\            # MCP 版测试用例设计（主力）
+│   ├── testcase-generator\  # 测试用例设计（主力）
 │   ├── ocr\                # 三轨协同识图
 │   │   └── scripts\         # OCR 脚本（windows-ocr.ps1 / vlm-vision.ps1 / ocr_extract.py，git 追踪团队共享）
 │   ├── img-to-mermaid\     # 流程图转 mermaid（本地开发中，未随仓库发布）
@@ -53,7 +53,7 @@
 
 - 私有信息（TAPD workspace_id、团队成员、数据库连接、知识库清单、归档路径等）统一存于 `config/project.config.json`（.gitignore 排除），模板见 `config/project.config.example.json`，字段说明见 `config/README.md`
 - 各 Skill 执行前先读配置；配置不存在时提示运行 `/setup`，不中断流程
-- 团队私有知识（如业务表速查）存于 `.qoder/team-memory/local/`（.gitignore 排除）；uitest 各端环境文档存于 `.qoder/skills/uitest/references/local/`（.gitignore 排除）
+- 团队私有知识（如业务表速查）存于 `.qoder/team-memory/local/`（.gitignore 排除）；ui-automation 各端环境文档存于 `.qoder/skills/ui-automation/references/local/`（.gitignore 排除）
 
 ## 环境变量
 
@@ -75,7 +75,7 @@
 
 ## 权威源定义
 
-- **mcpcase skill 唯一权威源**：`.qoder/skills/mcpcase/SKILL.md`（用例生成逻辑与输出格式均以此为准，不依赖 `AI测试用例设计指南-MCP版.md`）
+- **testcase-generator skill 唯一权威源**：`.qoder/skills/testcase-generator/SKILL.md`（用例生成逻辑与输出格式均以此为准，不依赖 `AI测试用例设计指南-MCP版.md`）
 - **团队规范权威源**：本目录（`.qoder/team-memory/`），个人记忆仅存个人偏好
 
 ## 系统环境

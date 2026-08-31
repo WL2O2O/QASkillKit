@@ -4,7 +4,7 @@ description: >
   项目初始化配置向导 Skill，简写为 /setup。首次使用本仓库或配置缺失时运行，
   引导用户生成 config/project.config.json（TAPD workspace_id、团队成员、数据库连接、
   知识库清单、产品端列表等私有配置），并可选初始化 workspace/ 骨架、team-memory/local/ 与
-  uitest/references/local/ 私有文档。能自动探测的信息（TAPD 项目、dbx 连接、知识库）
+  ui-automation/references/local/ 私有文档。能自动探测的信息（TAPD 项目、dbx 连接、知识库）
   优先自动探测，探测不到才询问用户。
   使用场景：用户运行 /setup、提到 "初始化"、"配置向导"、"首次使用"，
   或其他 skill 发现 config/project.config.json 不存在时引导至此。
@@ -18,7 +18,7 @@ description: >
 
 1. 生成 `config/project.config.json`（全部 skill 的私有配置来源，gitignore 不入库）
 2. 创建 `workspace/` 业务工作区骨架（归档路径目录；产物整体入库，仅 `personal/drafts/` 草稿副本 gitignore）
-3. （可选）初始化 `.qoder/team-memory/local/`（团队私有知识，如业务表速查）与 `.qoder/skills/uitest/references/local/`（各端测试环境文档）
+3. （可选）初始化 `.qoder/team-memory/local/`（团队私有知识，如业务表速查）与 `.qoder/skills/ui-automation/references/local/`（各端测试环境文档）
 
 > **原则**：能自动探测的绝不让用户手填；用户可跳过任何字段（留空/占位符），后续 skill 运行时会按需询问补齐。
 
@@ -87,7 +87,7 @@ workspace/data
 | 项 | 动作 |
 | :--- | :--- |
 | 业务表速查 | 创建 `.qoder/team-memory/local/db-tables.md`（表头骨架：业务领域 \| 核心表），内容由团队后续积累；若用户提供了 dbx 连接，可现场用 `information_schema.TABLES` 拉取表清单按注释初步归类 |
-| uitest 端文档 | 按 `.qoder/skills/uitest/references/env-template.md` 为用户报出的每个网页端在 `references/local/` 创建一份端文档，环境地址/账号由用户提供（敏感账号标注"每次询问，不记录"） |
+| ui-automation 端文档 | 按 `.qoder/skills/ui-automation/references/env-template.md` 为用户报出的每个网页端在 `references/local/` 创建一份端文档，环境地址/账号由用户提供（敏感账号标注"每次询问，不记录"） |
 
 ### 第六步：完成汇总
 

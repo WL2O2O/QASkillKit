@@ -1,5 +1,5 @@
 ---
-name: ai-testbug
+name: defect-logger
 description: >
   基于 AI缺陷模版.md 的缺陷报告生成 Skill。
   严格按照缺陷模板结构（标题、前置条件、复现步骤、实际结果、预期结果、附件/截图、补充说明）
