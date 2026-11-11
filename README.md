@@ -22,6 +22,7 @@
 | 📅 周报生成 | `weekly-report` | `/zb` | `写周报` | 从 TAPD 拉取本周需求/缺陷动态，按指南生成结构化周报 |
 | 🖼️ 三轨 OCR 识图 | `ocr` | — | 被其他 skill 自动调用 | Windows OCR（覆盖率）+ OpenOCR（精读）+ VLM（结构）三通道交叉验证 |
 | ⚙️ 初始化向导 | `setup` | `/setup` | 首次使用运行 | 自动探测 TAPD 项目/数据库连接/知识库，生成私有配置 |
+| 🧪 Agent 评测 | `evals/` 模块 | — | `python3 evals/evaluate.py` | YAML 评测集 + 规则断言/LLM-as-Judge 双通道；零 key 可跑、无需 TAPD，负向对照自测 |
 
 ## 🏗️ 架构设计
 
@@ -99,6 +100,19 @@ git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 /zb                     ← 生成本周周报
 ```
 
+## 🧪 Agent 评测（公开入口，无需 TAPD）
+
+这个模块是"改作业的老师"：只改已经写好的测试用例，全程不碰 TAPD。三种情况：
+
+```bash
+pip install pyyaml
+python3 evals/evaluate.py               # ① 只想试试：改仓库自带的 3 份用例，零 key
+export GLM_API_KEY=你的key               # ② 有 key：AI 用需求文字当场写简化版用例再改
+python3 evals/evaluate.py --live
+```
+
+③ 团队有 TAPD：真实 skill 生成用例后，喂进来用同一套标准改。**有自己的需求文字？** 放 `evals/fixtures/`、在 `evals/cases.yaml` 登记一条就能改。三种情况的逐步教程见 [evals/README.md](evals/README.md)。
+
 ## 🔒 隐私与脱敏设计
 
 本仓库可直接公开，所有私有信息通过三个 gitignore 隔离区管理：
@@ -116,6 +130,7 @@ git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 ```
 ├── AGENTS.md                    # Agent 全局指令（自动加载，强制读配置+记忆库）
 ├── config/                      # 私有配置中心（模板入库，真实配置 gitignore）
+├── evals/                       # Agent 评测模块（公开入口：YAML 评测集 + 双通道评测器 + 基线报告）
 ├── .qoder/
 │   ├── skills/                  # 技能包（setup/testcase-generator/ui-automation/acceptance-report/...）
 │   │   └── {skill}/SKILL.md     #   每个技能的完整执行规程 + scripts/ 固化脚本

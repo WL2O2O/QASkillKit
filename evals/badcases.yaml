@@ -1,0 +1,26 @@
+# Bad Case 根因登记簿（人工确认制）
+#
+# 流程：评测 fail → evaluate.py 在报告中给 suggested_root_cause → 人工确认后登记于此 → 积累趋势
+# 负向对照（negative-control）是评测器自测样本，不登记。
+#
+# root_cause 枚举：
+#   prompt    — prompt/SKILL.md 输出契约或设计方法缺陷（格式/追溯/覆盖类违规多归此类）
+#   model     — 模型能力/幻觉（虚构数据、指令遵循失败）
+#   tool      — MCP/脚本/环境问题（OCR 错识、dbx 查询失败、browser-use 坑点）
+#   knowledge — team-memory/知识库缺失或错误的业务规则
+#   evalset   — 评测集自身标注错误（fixture/rubric 写错，须修评测集而非 SUT）
+schema:
+  fields: [id, case_id, date, dimension, phenomenon, root_cause, suggested_by, confirmed_by, status, fix_ref]
+  status_enum: [open, confirmed, fixed, wontfix]
+entries: []
+# 示例（注释，非真实条目）：
+# - id: bc-0001
+#   case_id: tc-1000001-good
+#   date: 2026-11-11
+#   dimension: hallucination
+#   phenomenon: 用例虚构需求中不存在的账号密码
+#   root_cause: model
+#   suggested_by: evaluate.py
+#   confirmed_by: null   # 人工确认必填，AI 建议不算数
+#   status: open
+#   fix_ref: null        # 修复链接：prompt commit / skill 规则修订

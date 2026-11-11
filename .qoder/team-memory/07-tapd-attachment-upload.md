@@ -18,7 +18,7 @@ TAPD 需求详情页的附件上传控件有 **3 层隐藏/陷阱**，必须逐�
 
 ## 二、标准工作流（7 步，已验证可靠）
 
-前置：需求详情页 URL 格式 `https://www.tapd.cn/tapd_fe/{workspace_id}/story/detail/115123103700{需求ID}`（workspace_id 取 `config/project.config.json` 的 `tapd.workspace_id`）
+前置：需求详情页 URL 格式 `https://www.tapd.cn/tapd_fe/{workspace_id}/story/detail/11{workspace_id}00{需求ID}`（workspace_id 取 `config/project.config.json` 的 `tapd.workspace_id`）
 
 ### 步骤 1：导航到需求详情页
 

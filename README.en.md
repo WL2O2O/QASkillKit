@@ -22,6 +22,7 @@
 | 📅 Weekly Reports | `weekly-report` | `/zb` | `write weekly report` | Pulls requirement/defect updates from TAPD for the current week, generates a structured weekly report. |
 | 🖼️ OCR | `ocr` | — | Called by other skills automatically | Three-channel cross-validated OCR: Windows OCR (coverage) + OpenOCR (precision) + VLM (structure). |
 | ⚙️ Setup Wizard | `setup` | `/setup` | `/setup` on first use | Auto-detects TAPD project, DB connections, knowledge bases; generates private config. |
+| 🧪 Agent Evaluation | `evals/` module | — | `python3 evals/evaluate.py` | YAML eval set + rule assertions / LLM-as-Judge dual channel; runs with zero keys, no TAPD needed, negative-control self-test. |
 
 ## 🚀 Quick Start
 
@@ -56,6 +57,17 @@ test 1019311             ← Run UI automation for that requirement
 /ys generate s92 report ← Generate acceptance report
 /zb                     ← Generate this week's report
 ```
+
+## 🧪 Agent Evaluation (public entry, no TAPD needed)
+
+Clone and run without any TAPD project — experience the core methodology: **QA for AI itself**.
+
+```bash
+pip install pyyaml
+python3 evals/evaluate.py        # zero keys: rule channel + bundled desensitized outputs, baseline report
+```
+
+Provide any OpenAI-compatible key (e.g. `GLM_API_KEY`) to enable the LLM-as-Judge channel; `--live` makes the SUT prompt generate cases on the fly before evaluation. The eval set includes a **negative control** (intentionally bad output) that the evaluator must fully detect; the exit code is CI-ready for prompt regression. See [evals/README.md](evals/README.md).
 
 ## 🏗️ Architecture
 
@@ -124,6 +136,7 @@ Credentials (TAPD token, API keys) never enter config files — tokens from MCP 
 ```
 ├── AGENTS.md                    # Global agent instructions (auto-loaded)
 ├── config/                      # Private config center (template committed, real config gitignored)
+├── evals/                       # Agent evaluation module (public entry: YAML eval set + dual-channel evaluator + baseline reports)
 ├── .qoder/
 │   ├── skills/                  # Skills (setup/testcase-generator/ui-automation/acceptance-report/...)
 │   │   └── {skill}/SKILL.md     #   Each skill has a complete procedure + scripts/

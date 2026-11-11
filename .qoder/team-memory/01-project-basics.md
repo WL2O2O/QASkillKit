@@ -61,7 +61,7 @@
 |:---|:---|:---|
 | `GLM_API_KEY` | **用户变量（User scope）** | 智谱 GLM API Key，进程 `$env:` 读不到，需 `[Environment]::GetEnvironmentVariable("GLM_API_KEY","User")` 显式读取注入 |
 
-## PC后台测试账号（订货猿供应链）
+## PC后台测试账号（供应链示例项目）
 
 > ⚠️ 完整账号清单（测试环境地址 / 账号 / 密码 / 适用场景）为私有信息，存于 `.qoder/team-memory/local/test-accounts.md`（.gitignore 排除，**不入库**）；本文档仅保留规则描述，不出现具体账号名与密码。
 

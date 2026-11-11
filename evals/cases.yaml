@@ -1,0 +1,37 @@
+# QASkillKit 评测集（testcase-generator）
+# 公开入口：无需 TAPD/数据库，clone 即跑。路径相对 evals/ 目录。
+meta:
+  name: testcase-generator-evalset
+  version: 1
+  sut_prompt: prompts/testcase-generator.public.md
+  judge:
+    dimensions: [coverage, relevance, consistency, hallucination]
+    scale: [1, 5]
+    pass_threshold: 4   # judge 各维度均分 ≥ 4 才算过（1-5 分制）
+
+cases:
+  - id: tc-1000001-good
+    kind: positive
+    fixture: fixtures/1000001-requirement.md
+    output: ../examples/sample-testcase.md
+    expected_change_points: ["①", "②", "③"]
+
+  - id: tc-1000002-good
+    kind: positive
+    fixture: fixtures/1000002-requirement.md
+    output: ../demo/1000002-PC后台账户列表系统配置增加入库打码功能.md
+    expected_change_points: ["①", "②", "③", "④", "⑤"]
+
+  # 负向对照：故意写坏的样本，评测器必须检出以下违规（判别力自测）
+  - id: tc-1000001-negative
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/1000001-bad-output.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations:
+      - priority_valid
+      - no_jump_refs
+      - expected_non_empty
+      - format_columns
+      - no_secrets
+      - coverage
