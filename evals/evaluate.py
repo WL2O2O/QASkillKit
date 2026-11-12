@@ -12,7 +12,12 @@
   python3 evals/evaluate.py --scan          # 全仓结构扫描：用例目录所有 MD 跑 6 项结构规则（零 key）
   python3 evals/evaluate.py --scan --scan-root DIR  # 扫自定义用例目录（可多次指定）
   python3 evals/evaluate.py --add 用例.md --fixture 需求.md --points ①②  # 一键登记自己的用例
+  python3 evals/evaluate.py --diff 旧报告.json 新报告.json  # 回归对比：逐用例逐规则变好/变坏（零 key）
   python3 evals/evaluate.py --out DIR       # 报告输出目录（默认 evals/reports）
+
+报告命名：<前缀>-<日期>-<时分秒>.{md,json}，同日重跑互不覆盖（Judge 基线不会被零 key 重跑顶掉）。
+--diff 退出码：0 = 无退步（可当回归门禁）；1 = 有退步。Judge 单维 ±1 视为运行间抖动不判退步
+（见 calibration.yaml），降幅 ≥2 才判退步。
 
 环境变量（key 只从环境读，不落盘）：
   EVAL_LLM_API_KEY / GLM_API_KEY / OPENAI_API_KEY   任一即可启用 Judge/live
@@ -145,6 +150,128 @@ def scan_repo(roots=None):
                 "violations": {r: v[r] for r in SCAN_RULES if v[r]},
             })
     return results
+
+
+def report_stem(prefix, now=None):
+    """报告文件名主干：<前缀>-<日期>-<时分秒>。同日重跑互不覆盖（防 Judge 基线被零 key 重跑顶掉）。"""
+    now = now or datetime.datetime.now()
+    return "%s-%s-%s" % (prefix, now.strftime("%Y-%m-%d"), now.strftime("%H%M%S"))
+
+
+# ---------- 回归对比（--diff） ----------
+
+# Judge 单维 ±1 属运行间抖动（v2 复跑覆盖度 5→4 结论不变，见 calibration.yaml），
+# 降幅超过 JUDGE_NOISE 才判退步；规则通道是确定性的，任何新增违规都算退步。
+JUDGE_NOISE = 1
+
+
+def _render_diff(title, header, reg, imp, notes):
+    lines = [title, ""] + header + ["", "## 结论", "",
+             "- ❌ 退步 %d 项 · ✅ 变好 %d 项 · ℹ️ 说明 %d 项" % (len(reg), len(imp), len(notes)),
+             "- 退出码语义：退步 > 0 → 1（可当回归门禁）；否则 0"]
+    for section, arr in (("## ❌ 退步（新报告更差）", reg),
+                         ("## ✅ 变好（新报告更好）", imp),
+                         ("## ℹ️ 说明（不判退步，人工留意）", notes)):
+        if arr:
+            lines += ["", section, ""] + ["- %s" % x for x in arr]
+    return lines
+
+
+def _diff_baseline(old, new):
+    reg, imp, notes = [], [], []
+    header = ["- 旧：%s（%s，评测集 v%s）" % (old.get("date"), old.get("mode"), old.get("evalset_version")),
+              "- 新：%s（%s，评测集 v%s）" % (new.get("date"), new.get("mode"), new.get("evalset_version"))]
+    if old.get("evalset_version") != new.get("evalset_version"):
+        notes.append("评测集版本不同（v%s → v%s）：评分标准变过，对比仅供参考（升版本应重跑基线）"
+                     % (old.get("evalset_version"), new.get("evalset_version")))
+    oa, na = old.get("aggregates", {}), new.get("aggregates", {})
+    if oa.get("exit_ok") != na.get("exit_ok"):
+        (reg if not na.get("exit_ok") else imp).append(
+            "总体结论 exit_ok：%s → %s" % (oa.get("exit_ok"), na.get("exit_ok")))
+    if oa.get("discrimination_ok") != na.get("discrimination_ok"):
+        (reg if not na.get("discrimination_ok") else imp).append(
+            "判别力自测（负向对照）：%s → %s" % (oa.get("discrimination_ok"), na.get("discrimination_ok")))
+    occ, ncc = oa.get("change_point_coverage"), na.get("change_point_coverage")
+    if occ and ncc and list(occ) != list(ncc):
+        (reg if ncc[0] < occ[0] else imp).append(
+            "变更点覆盖：%d/%d → %d/%d" % (occ[0], occ[1], ncc[0], ncc[1]))
+
+    olds = {c["id"]: c for c in old.get("cases", [])}
+    news = {c["id"]: c for c in new.get("cases", [])}
+    for cid in list(olds) + [c for c in news if c not in olds]:
+        if cid not in olds:
+            notes.append("%s：新增用例（旧报告无此条，不参与对比）" % cid)
+            continue
+        if cid not in news:
+            notes.append("%s：旧报告有、新报告没有（用例被移除或改名？人工确认是否故意）" % cid)
+            continue
+        o, n = olds[cid], news[cid]
+        if o.get("verdict") != n.get("verdict"):
+            good = n.get("verdict") in ("pass", "detected")
+            (imp if good else reg).append(
+                "%s 结论：%s → %s" % (cid, o.get("verdict"), n.get("verdict")))
+        for rule in RULES:
+            ov = set(o.get("violations", {}).get(rule, []))
+            nv = set(n.get("violations", {}).get(rule, []))
+            reg += ["%s / %s 新增违规：%s" % (cid, rule, m) for m in sorted(nv - ov)]
+            imp += ["%s / %s 违规消除：%s" % (cid, rule, m) for m in sorted(ov - nv)]
+        oj, nj = o.get("judge"), n.get("judge")
+        if oj and nj:
+            for d, cell in oj.items():
+                if d not in nj:
+                    continue
+                delta = nj[d]["score"] - cell["score"]
+                if delta == 0:
+                    continue
+                if delta <= -(JUDGE_NOISE + 1):
+                    reg.append("%s / Judge %s：%s → %s（降幅超过 ±%d 抖动，判退步）"
+                               % (cid, d, cell["score"], nj[d]["score"], JUDGE_NOISE))
+                elif delta < 0:
+                    notes.append("%s / Judge %s：%s → %s（±%d 运行间抖动，不判退步）"
+                                 % (cid, d, cell["score"], nj[d]["score"], JUDGE_NOISE))
+                else:
+                    imp.append("%s / Judge %s：%s → %s" % (cid, d, cell["score"], nj[d]["score"]))
+        elif oj and not nj:
+            notes.append("%s：Judge 本次未跑（%s），只比规则通道" % (cid, n.get("judge_note", "无 key")))
+        elif nj and not oj:
+            notes.append("%s：Judge 本次新启用（%s），旧报告无分数可比" % (cid, n.get("judge_note", "")))
+    lines = _render_diff("# 回归对比报告（登记评测）", header, reg, imp, notes)
+    return lines, reg, imp
+
+
+def _diff_scan(old, new):
+    reg, imp, notes = [], [], []
+    header = ["- 旧：%s（扫描根：%s）" % (old.get("date"), ", ".join(old.get("roots", []))),
+              "- 新：%s（扫描根：%s）" % (new.get("date"), ", ".join(new.get("roots", [])))]
+    of = {f["path"]: f for f in old.get("files", [])}
+    nf = {f["path"]: f for f in new.get("files", [])}
+    for path in list(of) + [p for p in nf if p not in of]:
+        if path not in of:
+            bad = nf[path].get("violations", {})
+            if bad:
+                reg += ["%s（新纳入扫描）/ %s：%s" % (path, r, "；".join(m))
+                        for r, m in sorted(bad.items())]
+            else:
+                notes.append("%s：新纳入扫描，结构合规" % path)
+            continue
+        if path not in nf:
+            notes.append("%s：不再被扫描（文件删除/移动/扫描根变化？人工确认）" % path)
+            continue
+        for rule in SCAN_RULES:
+            ov = set(of[path].get("violations", {}).get(rule, []))
+            nv = set(nf[path].get("violations", {}).get(rule, []))
+            reg += ["%s / %s 新增违规：%s" % (path, rule, m) for m in sorted(nv - ov)]
+            imp += ["%s / %s 违规消除：%s" % (path, rule, m) for m in sorted(ov - nv)]
+    lines = _render_diff("# 回归对比报告（全仓扫描）", header, reg, imp, notes)
+    return lines, reg, imp
+
+
+def diff_reports(old, new):
+    """对比两份 JSON 报告，返回 (markdown 行, 退步列表, 变好列表)。基线报告与扫描报告各自可比。"""
+    old_scan, new_scan = old.get("mode") == "scan", new.get("mode") == "scan"
+    if old_scan != new_scan:
+        raise ValueError("两份报告类型不同（一份全仓扫描、一份登记评测），不能对比")
+    return _diff_scan(old, new) if old_scan else _diff_baseline(old, new)
 
 
 def llm_chat(messages, model, base, key):
@@ -288,10 +415,32 @@ def main():
     ap.add_argument("--id", default="", help="登记 id（--add 可选，默认取用例文件名）")
     ap.add_argument("--scan-root", action="append", metavar="DIR",
                     help="自定义扫描根（--scan 用，可多次；默认项目约定目录）")
+    ap.add_argument("--diff", nargs=2, metavar=("OLD_JSON", "NEW_JSON"),
+                    help="回归对比两份 JSON 报告：逐用例逐规则变好/变坏（零 key；退步>0 退出码 1）")
     args = ap.parse_args()
 
     if args.add:
         add_case(args)
+
+    if args.diff:
+        paths = [Path(p) for p in args.diff]
+        for p in paths:
+            if not p.is_file():
+                sys.exit("--diff: 报告不存在：%s" % p)
+        old = json.loads(paths[0].read_text(encoding="utf-8"))
+        new = json.loads(paths[1].read_text(encoding="utf-8"))
+        try:
+            lines, reg, _ = diff_reports(old, new)
+        except ValueError as e:
+            sys.exit("--diff: %s" % e)
+        out_dir = Path(args.out)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / ("diff-%s-vs-%s.md" % (paths[0].stem, paths[1].stem))
+        dest.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print("\n".join(lines))
+        print("")
+        print("报告已写入：%s" % dest)
+        sys.exit(1 if reg else 0)
 
     if args.scan:
         roots = args.scan_root or SCAN_ROOTS
@@ -301,15 +450,18 @@ def main():
                 sys.exit("扫描根不存在：%s" % r)
         files = scan_repo(roots)
         bad = [f for f in files if f["violations"]]
-        today = datetime.date.today().isoformat()
+        now = datetime.datetime.now()
+        stem = report_stem("scan", now)
+        today = now.date().isoformat()
         out_dir = Path(args.out)
         out_dir.mkdir(parents=True, exist_ok=True)
-        scan = {"date": today, "mode": "scan", "roots": roots, "files": files,
+        scan = {"date": today, "generated_at": now.isoformat(timespec="seconds"),
+                "mode": "scan", "roots": roots, "files": files,
                 "aggregates": {"files_scanned": len(files),
                                "files_violating": len(bad), "exit_ok": not bad}}
-        (out_dir / ("scan-%s.json" % today)).write_text(
+        (out_dir / (stem + ".json")).write_text(
             json.dumps(scan, ensure_ascii=False, indent=2), encoding="utf-8")
-        md = ["# 全仓结构扫描报告 %s" % today, "",
+        md = ["# 全仓结构扫描报告 %s" % now.strftime("%Y-%m-%d %H:%M:%S"), "",
               "- 扫描根：%s" % ", ".join(roots),
               "- 用例文件 %d 份，违规 %d 份" % (len(files), len(bad)), ""]
         if bad:
@@ -320,14 +472,14 @@ def main():
                     md.append("- **%s / %s**：%s" % (f["path"], rule, "；".join(msgs)))
         else:
             md.append("（全部用例文件结构合规）")
-        (out_dir / ("scan-%s.md" % today)).write_text("\n".join(md) + "\n", encoding="utf-8")
+        (out_dir / (stem + ".md")).write_text("\n".join(md) + "\n", encoding="utf-8")
         if args.brief:
             for f in bad:
                 for rule, msgs in f["violations"].items():
                     print("- 全仓扫描 %s / %s：%s" % (f["path"], rule, "；".join(msgs)))
         else:
             print("\n".join(md))
-            print("报告已写入：%s/scan-%s.{md,json}" % (out_dir, today))
+            print("报告已写入：%s/%s.{md,json}" % (out_dir, stem))
         sys.exit(0 if not bad else 1)
 
     cfg = yaml.safe_load(Path(args.eval_set).read_text(encoding="utf-8"))
@@ -396,12 +548,15 @@ def main():
     discrimination = all(n["verdict"] == "detected" for n in negatives)
     exit_ok = all(p["verdict"] == "pass" for p in positives) and discrimination
 
-    today = datetime.date.today().isoformat()
+    now = datetime.datetime.now()
+    stem = report_stem("baseline", now)
+    today = now.date().isoformat()
     mode = ("live" if args.live else "offline") + ("+judge" if key else "+rules-only")
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     report = {
-        "date": today, "mode": mode, "evalset_version": cfg["meta"]["version"],
+        "date": today, "generated_at": now.isoformat(timespec="seconds"),
+        "mode": mode, "evalset_version": cfg["meta"]["version"],
         "key_source": key_src, "judge_model": judge_model if key else None,
         "cases": results,
         "aggregates": {
@@ -411,10 +566,10 @@ def main():
             "exit_ok": exit_ok,
         },
     }
-    (out_dir / ("baseline-%s.json" % today)).write_text(
+    (out_dir / (stem + ".json")).write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    md = ["# 评测基线报告 %s（%s）" % (today, mode), ""]
+    md = ["# 评测基线报告 %s（%s）" % (now.strftime("%Y-%m-%d %H:%M:%S"), mode), ""]
     md.append("- 评测集版本：%s；Judge：%s" % (cfg["meta"]["version"],
               ("启用（%s，key 来源 %s）" % (judge_model, key_src)) if key else "跳过（无 key，不伪造分数）"))
     md.append("- 判别力自测（负向对照）：%s" % ("✅ 全部检出" if discrimination else "❌ 有漏检"))
@@ -450,7 +605,7 @@ def main():
     md.append("")
     md.append("> Judge 校准提醒：LLM-as-Judge 自身需人工抽样校准（judge-人工一致率），")
     md.append("> 本报告 judge 分数仅作基线参考，方法论见 evals/README.md。")
-    (out_dir / ("baseline-%s.md" % today)).write_text("\n".join(md) + "\n", encoding="utf-8")
+    (out_dir / (stem + ".md")).write_text("\n".join(md) + "\n", encoding="utf-8")
 
     if args.brief:
         for r in results:
@@ -464,7 +619,7 @@ def main():
                 print("- 登记评测 %s：负向对照未全部检出，评测器自身可能坏了" % r["id"])
     else:
         print("\n".join(md[:12]))
-        print("报告已写入：%s/baseline-%s.{md,json}" % (out_dir, today))
+        print("报告已写入：%s/%s.{md,json}" % (out_dir, stem))
         print("exit_ok=%s" % exit_ok)
     sys.exit(0 if exit_ok else 1)
 

@@ -11,6 +11,8 @@
    引用文件存在性
 5. 判别力与正样本保证：负向对照必须检出全部登记违规；正样本必须零违规
    （与运行时退出码语义一致，防止评测集或规则被改坏）
+6. 报告命名（同日重跑不覆盖）与回归对比 --diff：退步/变好/抖动语义、
+   Judge ±1 不判退步、扫描报告对比、类型不匹配拒绝、真实基线锚点
 
 运行：python3 -m pytest evals/tests -q
 """
@@ -298,3 +300,153 @@ class TestResolveKey:
         monkeypatch.setenv("GLM_API_KEY", "k-second")
         monkeypatch.setenv("OPENAI_API_KEY", "k-third")
         assert evaluate.resolve_key() == ("k-first", "EVAL_LLM_API_KEY")
+
+
+# ---------- 7. 报告命名（同日重跑不覆盖） ----------
+
+class TestReportStem:
+    def test_format(self):
+        import datetime as dt
+        stem = evaluate.report_stem("baseline", dt.datetime(2026, 11, 13, 9, 5, 3))
+        assert stem == "baseline-2026-11-13-090503"
+
+    def test_same_day_different_seconds_no_collision(self):
+        import datetime as dt
+        a = evaluate.report_stem("baseline", dt.datetime(2026, 11, 13, 9, 0, 0))
+        b = evaluate.report_stem("baseline", dt.datetime(2026, 11, 13, 21, 30, 1))
+        assert a != b  # Judge 基线不会被同日零 key 重跑顶掉
+
+
+# ---------- 8. 回归对比（--diff） ----------
+
+DIMS = ("coverage", "relevance", "consistency", "hallucination")
+
+
+def judge_scores(**over):
+    s = {d: {"score": 5, "reason": "ok"} for d in DIMS}
+    for d, v in over.items():
+        s[d]["score"] = v
+    return s
+
+
+def base_case(cid="tc-1", kind="positive", verdict="pass", violations=None, judge=None,
+              judge_note=""):
+    return {"id": cid, "kind": kind, "verdict": verdict,
+            "violations": violations or {}, "judge": judge, "judge_note": judge_note}
+
+
+def base_report(cases=None, version=2, mode="offline+rules-only", date="2026-11-12", **agg):
+    a = {"rule_compliance": {}, "change_point_coverage": [8, 8],
+         "discrimination_ok": True, "exit_ok": True}
+    a.update(agg)
+    return {"date": date, "mode": mode, "evalset_version": version,
+            "cases": cases if cases is not None else [], "aggregates": a}
+
+
+def scan_report(files=None, date="2026-11-12"):
+    return {"date": date, "mode": "scan", "roots": ["examples"],
+            "files": files or [], "aggregates": {}}
+
+
+class TestDiffReports:
+    def test_identical_reports_no_change(self):
+        r = base_report([base_case()])
+        lines, reg, imp = evaluate.diff_reports(r, json.loads(json.dumps(r)))
+        assert reg == [] and imp == []
+        assert "退步 0 项" in "\n".join(lines)
+
+    def test_new_violation_is_regression(self):
+        old = base_report([base_case()])
+        new = base_report([base_case(verdict="fail",
+                                     violations={"priority_valid": ["行1 优先级'P5'非法"]})])
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert any("priority_valid 新增违规" in x for x in reg)
+        assert any("结论：pass → fail" in x for x in reg)
+        assert imp == []
+
+    def test_fixed_violation_is_improvement(self):
+        old = base_report([base_case(verdict="fail",
+                                     violations={"priority_valid": ["行1 优先级'P5'非法"]})],
+                          exit_ok=False)
+        new = base_report([base_case()])
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == []
+        assert any("违规消除" in x for x in imp)
+        assert any("fail → pass" in x for x in imp)
+        assert any("exit_ok" in x for x in imp)
+
+    def test_judge_minus_one_is_noise_not_regression(self):
+        old = base_report([base_case(judge=judge_scores())], mode="offline+judge")
+        new = base_report([base_case(judge=judge_scores(coverage=4))], mode="offline+judge")
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == []
+        assert any("抖动" in x for x in lines)
+
+    def test_judge_drop_beyond_noise_is_regression(self):
+        old = base_report([base_case(judge=judge_scores())], mode="offline+judge")
+        new = base_report([base_case(judge=judge_scores(hallucination=3))], mode="offline+judge")
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert any("hallucination" in x and "判退步" in x for x in reg)
+
+    def test_judge_score_up_is_improvement(self):
+        old = base_report([base_case(judge=judge_scores(coverage=4))], mode="offline+judge")
+        new = base_report([base_case(judge=judge_scores())], mode="offline+judge")
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and any("coverage" in x for x in imp)
+
+    def test_judge_only_in_old_becomes_note(self):
+        old = base_report([base_case(judge=judge_scores())], mode="offline+judge")
+        new = base_report([base_case(judge_note="skipped（无 API key，仅规则通道）")])
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and imp == []
+        assert any("只比规则通道" in x for x in lines)
+
+    def test_evalset_version_mismatch_warns(self):
+        lines, reg, imp = evaluate.diff_reports(
+            base_report(version=1), base_report(version=2))
+        assert reg == []
+        assert any("评测集版本不同" in x for x in lines)
+
+    def test_added_and_removed_cases_are_notes(self):
+        old = base_report([base_case(cid="tc-old")])
+        new = base_report([base_case(cid="tc-new")])
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and imp == []
+        text = "\n".join(lines)
+        assert "tc-new：新增用例" in text and "tc-old：旧报告有、新报告没有" in text
+
+    def test_negative_control_missed_is_regression(self):
+        old = base_report([base_case(cid="tc-neg", kind="negative-control", verdict="detected")])
+        new = base_report([base_case(cid="tc-neg", kind="negative-control", verdict="MISSED")],
+                          discrimination_ok=False, exit_ok=False)
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert any("detected → MISSED" in x for x in reg)
+        assert any("判别力" in x for x in reg)
+
+    def test_coverage_drop_is_regression(self):
+        lines, reg, imp = evaluate.diff_reports(
+            base_report(), base_report(change_point_coverage=[7, 8]))
+        assert any("变更点覆盖" in x for x in reg)
+
+    def test_scan_new_violation_and_fix(self):
+        old = scan_report([{"path": "examples/a.md", "rows": 2,
+                            "violations": {"priority_valid": ["行1 优先级'P5'非法"]}}])
+        new = scan_report([{"path": "examples/a.md", "rows": 2, "violations": {}},
+                           {"path": "examples/b.md", "rows": 1,
+                            "violations": {"no_jump_refs": ["行1 操作步骤含跳转引用"]}}])
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert any("b.md（新纳入扫描）/ no_jump_refs" in x for x in reg)
+        assert any("a.md / priority_valid 违规消除" in x for x in imp)
+
+    def test_mixed_report_types_rejected(self):
+        with pytest.raises(ValueError):
+            evaluate.diff_reports(base_report(), scan_report())
+
+    def test_diff_against_real_committed_baselines(self):
+        # 真实防回归锚点：11-11（v1 零 key）与 11-12（v2 offline+judge）对比不得判出退步
+        rd = EVAL_DIR / "reports"
+        old = json.loads((rd / "baseline-2026-11-11.json").read_text(encoding="utf-8"))
+        new = json.loads((rd / "baseline-2026-11-12.json").read_text(encoding="utf-8"))
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [], "真实基线对比出现退步: %s" % reg
+        assert any("评测集版本不同" in x for x in lines)  # v1 → v2 必须给出警告

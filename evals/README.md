@@ -123,9 +123,38 @@ python3 -m pytest evals/tests -q   # 58 条用例，零 key，1 秒内跑完
 
 ## 报告在哪、怎么看
 
-- `evals/reports/baseline-日期.md`：给人看的报告；
-- 同名 `.json`：给机器看的，两次运行对比差异就是回归报告；
+- `evals/reports/baseline-日期-时分秒.md`：给人看的报告；文件名带时分秒，**同日重跑互不覆盖**（先跑 Judge 基线再零 key 重跑，两份都在，谁也不会顶掉谁）；
+- 同名 `.json`：给机器看的，两份喂给 `--diff` 就是回归报告（见下节）；
 - 命令退出码 0 = 全过，1 = 有失败。仓库已挂好 CI（`.github/workflows/evals.yml`）：每次 push/PR 自动跑评测器 pytest 自测 + 登记评测 + 全仓扫描三层（零 key），失败亮红叉（配合分支保护可挡合并），README 顶部有徽章。Judge 通道不在 CI 跑（不在 CI 存 key），本地 export key 即可启用。
+
+## 回归对比（--diff）：两次报告一比就是回归报告
+
+改了 prompt、换了模型、调了规则之后，前后各跑一次评测，一条命令看逐用例逐规则的变好/变坏：
+
+```bash
+python3 evals/evaluate.py --diff evals/reports/baseline-旧.json evals/reports/baseline-新.json
+```
+
+- 输出三类条目：**❌ 退步**（新增违规、结论变差、Judge 大幅下降、覆盖度/判别力下降）、**✅ 变好**、**ℹ️ 说明**（评测集版本差异、新增/移除用例、±1 抖动——不判退步但要人工留意）；
+- **Judge 单维 ±1 不判退步**：小模型复跑本来就有 ±1 抖动（见 calibration.yaml），降幅 ≥2 才算退步；规则通道是确定性的，任何新增违规都算退步；
+- 退出码：退步 > 0 → 1，否则 → 0——可直接当 prompt 回归门禁（A/B 两份报告 --diff 就是 A/B 回归演示）；
+- 扫描报告（scan-*.json）之间也能比；登记评测和扫描报告不能混比（会明确报错）；
+- 评测集版本不同时会给警告：评分标准变过，对比仅供参考。
+
+真实效果（校准前 v1 报告 vs 修复后 v2 基线，`--diff` 真实输出节选）：
+
+```markdown
+## 结论
+- ❌ 退步 0 项 · ✅ 变好 9 项 · ℹ️ 说明 2 项
+
+## ✅ 变好（新报告更好）
+- 总体结论 exit_ok：False → True
+- tc-1000001-good 结论：fail → pass
+- tc-1000001-good / Judge hallucination：1 → 5
+……
+## ℹ️ 说明（不判退步，人工留意）
+- tc-1000001-negative / Judge hallucination：2 → 1（±1 运行间抖动，不判退步）
+```
 
 ## 全仓结构扫描（--scan）
 

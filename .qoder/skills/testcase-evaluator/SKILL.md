@@ -4,13 +4,16 @@ description: >
   Test-case quality evaluation skill (alias /eval). Conversational entry to the evals/
   dual-channel evaluator: registered evals (8 rule assertions + LLM-as-Judge 4-dimension
   scoring), repo-wide structural scan (--scan), custom scan roots (--scan-root),
-  one-command case registration (--add), and on-the-fly generation with a key (--live).
+  one-command case registration (--add), regression comparison of two reports (--diff),
+  and on-the-fly generation with a key (--live).
   Explains violations in plain language; badcase root causes and calibration records
   stay draft-only until a human confirms. Runs with zero keys, no TAPD needed.
-  测试用例评测 Skill（简写 /eval）：登记评测、全仓结构扫描、--add 一键登记、有 key 时现场生成再评；
+  测试用例评测 Skill（简写 /eval）：登记评测、全仓结构扫描、--add 一键登记、--diff 回归对比、
+  有 key 时现场生成再评；
   违规解读成人话，badcase 根因与校准记录出草稿待人工确认。零 key 可跑、不依赖 TAPD。
   Use when the user says "评测/跑评测/给用例打分/eval", "evaluate/run evals/grade this
-  case file", gives a case-file path for a quality check, or types /eval.
+  case file", "对比两次报告/有没有退步/回归对比", gives a case-file path for a quality
+  check, or types /eval.
 ---
 
 # Test-Case Evaluation (testcase-evaluator)
@@ -26,7 +29,7 @@ description: >
 
 Triggered by `/eval`, or phrases like "run evals", "evaluate this case file",
 "grade xxx.md", "评测一下这份用例", "跑评测". If the target is ambiguous, ask first
-(registered set / specific file / whole repo / live generation) — do not guess.
+(registered set / specific file / whole repo / live generation / two-report diff) — do not guess.
 Always respond in the user's language.
 
 ## Execution Flow Overview
@@ -51,6 +54,7 @@ Always respond in the user's language.
 | Grade a specific unregistered file | `--scan` (or `--scan-root`) first for structure | content grading (coverage/judge) needs registration: `--add CASE.md --fixture REQ.md --points ①②`, see evals/README scenario 2 |
 | Register my own case | `python3 evals/evaluate.py --add CASE.md --fixture REQ.md --points ①②` | copies the fixture, appends to cases.yaml preserving comments; remind the user to desensitize (public repo) |
 | AI writes cases, then grades | `python3 evals/evaluate.py --live` | needs a key; simplified (text only, no prototypes/DB) |
+| Compare two runs (prompt/model regression) | `python3 evals/evaluate.py --diff OLD.json NEW.json` | per-case per-rule better/worse; judge ±1 single-dim change = noise, drop ≥2 = regression; exit 1 on regressions; scan reports comparable too, but never baseline-vs-scan |
 | Different model/vendor | env `EVAL_LLM_BASE_URL`/`EVAL_LLM_MODEL` or `--judge-model` | any OpenAI-compatible endpoint |
 
 ## Execution Notes
@@ -61,7 +65,8 @@ present → judge auto-enabled; none → rules only, and tell the user explicitl
 never written to any file, never echoed in full in chat.
 
 **Step 3, running**: exit code 0 = all pass, 1 = failures; reports default to
-`evals/reports/` (override with `--out`). Add `--brief` for hook/CI-style concise
+`evals/reports/` (override with `--out`); filenames carry date + time, so same-day
+re-runs never overwrite earlier baselines. Add `--brief` for hook/CI-style concise
 output (blocking items only).
 
 **Step 4, interpretation**:

@@ -122,6 +122,8 @@ python3 evals/evaluate.py --live
 
 评测器自己也要被评测：自带 pytest 自测锁住规则边界、表格解析、扫描逻辑与判别力保证（`pip install -r requirements.txt && python3 -m pytest evals/tests -q`，零 key 秒级），CI 同样跑。
 
+改了 prompt / 换了模型，想知道变好还是变坏？两份报告一条命令回归对比：`python3 evals/evaluate.py --diff 旧.json 新.json`，逐用例逐规则列出退步/变好（Judge ±1 抖动不算退步），退出码可直接当回归门禁。报告文件名带时分秒，同日重跑互不覆盖。
+
 **报告长什么样**（真实基线节选：好的 2 份通过，故意写坏的 1 份被全部检出；完整版在 `evals/reports/`）：
 
 ```markdown

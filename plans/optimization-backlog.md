@@ -14,8 +14,8 @@
 | 7 | GitHub 门面三件套 | 加 topics（llm-evaluation/test-case/agent-skills/qa）、打首个 release tag v0.1.0、仓库简介突出"LLM 测试用例评测"差异化标签。v0.1.0 已推送，topics/简介/Release 已由用户在网页完成 | done |
 | 8 | 精准分发 | 中文发 TesterHome/掘金（测试工程师受众），英文发 dev.to；主题"我给 AI 写的用例找了个改作业的老师"，配第 1 条设计图 | backlog |
 | 9 | 评测器自测 + requirements | evaluate.py 367 行仅负向对照一个自测，补 pytest（规则边界/YAML 解析/scan 逻辑）+ requirements.txt。面试故事："评测器也要被评测" | done |
-| 10 | 回归对比命令 | README 称"两次 JSON 对比即回归报告"但需人肉 diff。加 `--diff 报告1.json 报告2.json` 输出逐用例逐规则变好/变坏 | backlog |
-| 11 | 报告同日覆盖保护 | evaluate.py 按 `baseline-<日期>` 写报告，同日重跑直接覆盖：先带 key 跑出 Judge 基线、再零 key 重跑，Judge 基线会被规则版悄悄顶掉（git 里有存档可恢复，但本地是坑）。建议文件名加时分秒或覆盖前提示 | backlog |
+| 10 | 回归对比命令 | README 称"两次 JSON 对比即回归报告"但需人肉 diff。加 `--diff 报告1.json 报告2.json` 输出逐用例逐规则变好/变坏 | done |
+| 11 | 报告同日覆盖保护 | evaluate.py 按 `baseline-<日期>` 写报告，同日重跑直接覆盖：先带 key 跑出 Judge 基线、再零 key 重跑，Judge 基线会被规则版悄悄顶掉（git 里有存档可恢复，但本地是坑）。建议文件名加时分秒或覆盖前提示 | done |
 
 > 已在路线图、不重复列：A/B prompt 回归演示、评测集扩到 8-10 条。
 > 诚实提醒：第 7/8 条增加曝光，但星星增速取决于内容质量与运气，不编预期数字。
@@ -35,3 +35,12 @@
 - CI（evals.yml）第一步加 `python3 -m pytest evals/tests -q`，依赖安装改用 requirements.txt；pre-commit 钩子保持两层不动（避免强制装 pytest，秒级优先）；
 - 刻意边界：不测 Judge 网络调用与 --live（需 key，由人工校准实录兜底），单测只锁确定性逻辑；
 - 文档同步：evals/README.md 新增「评测器自测」节并改 CI 描述为三层，中英 README 评测入口各加一句。
+
+## 第 10+11 条落地记录（2026-11-13）
+
+- `--diff 旧.json 新.json`：逐用例逐规则输出 ❌退步/✅变好/ℹ️说明 三类；规则通道新增违规即退步，Judge 单维 ±1 视为运行间抖动（calibration.yaml 已知），降幅 ≥2 才判退步；退出码 退步>0→1 可直接当 prompt 回归门禁（A/B 演示的工具已就位）；
+- 扫描报告（scan-*.json）之间也可比；登记评测与扫描混比明确报错；评测集版本不同给"仅供参考"警告；新增/消失用例列入说明不判退步（防误伤，删用例须人工确认）；
+- 报告文件名改为 `<前缀>-<日期>-<时分秒>`（baseline 与 scan 都改），同日重跑互不覆盖，JSON 增加 generated_at 字段；pre-commit 钩子不解析文件名，零影响；
+- 新增 16 条 pytest（report_stem 命名 + diff 语义全套 + 真实基线锚点：11-11 vs 11-12 必须零退步），总数 74 条；
+- 真实验证：校准前 v1 vs 修复后 v2 基线 diff 输出"变好 9 项"（fail→pass、hallucination 1→5），与校准实录完全吻合；负向对照 2→1 正确落入抖动说明；
+- 文档同步：evals/README 新增「回归对比」节（含真实输出节选）+ 报告命名说明，中英 README 各加一句，testcase-evaluator SKILL.md 模式表加 --diff 行。

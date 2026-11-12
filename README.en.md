@@ -102,6 +102,8 @@ Provide any OpenAI-compatible key (e.g. `GLM_API_KEY`) to enable the LLM-as-Judg
 
 **The evaluator is evaluated too** — pytest self-tests lock rule boundaries, table parsing, scan logic and the discrimination guarantee (`pip install -r requirements.txt && python3 -m pytest evals/tests -q`, zero keys, under a second); CI runs them on every push/PR.
 
+**Prompt/model regression** — `python3 evals/evaluate.py --diff old.json new.json` compares two reports per case and per rule, listing regressions vs improvements (a ±1 single-dimension judge change counts as run-to-run noise, not regression); the exit code works as a regression gate. Report filenames carry date + time, so same-day re-runs never overwrite earlier baselines.
+
 **Bring your own cases** — register with one command, no hand-written YAML:
 
 ```bash
