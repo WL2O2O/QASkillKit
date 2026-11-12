@@ -1,0 +1,28 @@
+# 评测回归门禁：每次 push / PR 自动跑规则通道（零 key，不依赖任何外部服务）。
+# 退出码 0 = 正样本全过且负向对照全部检出；非 0 亮红叉（配合 branch protection 可挡合并）。
+# Judge 通道不在 CI 跑（不在 CI 存 key）；本地 export key 即可启用，见 evals/README.md。
+name: evals
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rule-channel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependency
+        run: pip install pyyaml
+      - name: Run evaluator (rule channel, no key)
+        run: python3 evals/evaluate.py
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evals-report
+          path: evals/reports/

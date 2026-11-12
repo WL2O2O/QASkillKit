@@ -1,0 +1,18 @@
+# Judge-人工一致率校准记录（人工复批后才算数）
+# 每次校准追加一条；样本量小须注明局限，评测集扩充后继续抽样。
+schema:
+  fields: [id, date, judge_model, mode, sample_size, agreed, agreement, reviewer, scope, note]
+entries:
+  - id: cal-0001
+    date: 2026-11-12
+    judge_model: glm-4-flash
+    mode: offline+judge
+    sample_size: 8          # 2 份正样本 × 4 维度
+    agreed: 8
+    agreement: 1.0
+    reviewer: WL2O2O（人工逐条复批）
+    scope: baseline-2026-11-12 复评（rubric 修复后全 5 分那次，见 bc-0001/0002）
+    note: >-
+      样本量小，一致率仅代表本批；评测集扩充后需继续抽样校准。
+      升 v2 后复跑：7/8 分数不变，tc-1000001-good 覆盖度 5→4（运行间 ±1 抖动），
+      两份结论仍 pass；最终基线均分 4.8/5.0。

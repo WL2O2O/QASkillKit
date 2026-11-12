@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """QASkillKit 评测器（单文件 · 双通道 · 无 TAPD 公开入口）
 
-通道 1 规则断言：格式/优先级/追溯/跳转引用/空预期/虚构凭证/变更点覆盖，零 key 可跑。
+通道 1 规则断言：格式/优先级/追溯/跳转引用/空预期/虚构凭证/变更点说明/变更点覆盖，零 key 可跑。
 通道 2 LLM-as-Judge：coverage/relevance/consistency/hallucination 四维 1-5 分，
         检测到 API key 自动启用，否则明确跳过（不伪造分数）。
 
@@ -44,6 +44,16 @@ SUGGESTED_ROOT_CAUSE = {
     "format_columns": "prompt", "priority_valid": "prompt", "traceability": "prompt",
     "no_jump_refs": "prompt", "expected_non_empty": "prompt", "change_section": "prompt",
     "coverage": "prompt", "no_secrets": "model",
+}
+
+# Judge 维度定义：显式写明含义与方向（一律"分越高越好"）。
+# 2026-11-12 首次真实运行校准产物：修复 hallucination 极性误解与"实际结果列为空"误判，
+# 见 badcases.yaml bc-0001 / bc-0002。
+DIM_DEFS = {
+    "coverage": "覆盖度：用例是否覆盖需求的全部变更点与主要场景。5=变更点全覆盖且粒度合理；仅缺个别极端边界不低于4",
+    "relevance": "相关性：每条用例是否直接对应需求中的功能点或规则。5=全部直接相关",
+    "consistency": "一致性：用例间格式、术语、逻辑是否一致，预期结果是否具体可验证。5=完全一致",
+    "hallucination": "无幻觉程度：是否虚构需求中不存在的事实（功能、业务数据、凭证、内网地址）。5=完全无虚构，1=大量虚构；明确标注为示例/占位的测试账号不算虚构",
 }
 
 
@@ -115,11 +125,17 @@ def extract_json(text):
 
 def judge(fixture, output, cfg, model, base, key):
     dims = cfg["dimensions"]
+    dim_lines = "\n".join("- %s：%s" % (d, DIM_DEFS.get(d, "按维度名含义评审")) for d in dims)
     prompt = (
         "你是严格的测试用例质量评审员。对照需求原文评审用例产出，按 1-5 分打分"
         "（5=完全满足，4=少量可接受瑕疵，3=明显问题，2=严重问题，1=完全不符）。\n"
-        "维度：%s。\n只输出 JSON，格式 {\"维度名\": {\"score\": 数字, \"reason\": \"一句话理由\"}}。\n\n"
-        "【需求原文】\n%s\n\n【用例产出】\n%s" % (", ".join(dims), fixture, output))
+        "所有维度都是分数越高越好。维度定义：\n%s\n"
+        "评审约定：\n"
+        "1. 「实际结果」列在执行阶段才填写，设计阶段为空属正常，不算缺陷、不算幻觉。\n"
+        "2. reason 必须与 score 方向一致：理由说没有问题就必须给高分。\n"
+        "3. 用例文件头部的元信息（脱敏声明、样本类型标注等）不属于用例内容，不参与打分。\n"
+        "只输出 JSON，格式 {\"维度名\": {\"score\": 数字, \"reason\": \"一句话理由\"}}。\n\n"
+        "【需求原文】\n%s\n\n【用例产出】\n%s" % (dim_lines, fixture, output))
     raw = llm_chat([{"role": "user", "content": prompt}], model, base, key)
     scores = extract_json(raw)
     for d in dims:

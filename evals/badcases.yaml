@@ -1,6 +1,7 @@
 # Bad Case 根因登记簿（人工确认制）
 #
-# 流程：评测 fail → evaluate.py 在报告中给 suggested_root_cause → 人工确认后登记于此 → 积累趋势
+# 流程：规则违规（evaluate.py 在报告中给 suggested_root_cause）或裁判误判（人工复批发现）
+#       → 人工确认后登记于此 → 积累趋势
 # 负向对照（negative-control）是评测器自测样本，不登记。
 #
 # root_cause 枚举：
@@ -12,7 +13,32 @@
 schema:
   fields: [id, case_id, date, dimension, phenomenon, root_cause, suggested_by, confirmed_by, status, fix_ref]
   status_enum: [open, confirmed, fixed, wontfix]
-entries: []
+entries:
+  - id: bc-0001
+    case_id: tc-1000001-good
+    date: 2026-11-12
+    dimension: hallucination
+    phenomenon: >-
+      首次真实 Judge 运行（glm-4-flash）hallucination 打 1 分，理由为"实际结果列未填写"。
+      实际结果列由执行阶段填写，设计阶段为空属正常；裁判误解列语义，
+      均分被拉至 3.5 < 4，正样本被误判 fail。
+    root_cause: evalset
+    suggested_by: AI 分析
+    confirmed_by: WL2O2O（2026-11-12）
+    status: fixed
+    fix_ref: evaluate.py judge() 评分标准修订（DIM_DEFS + 评审约定1）
+  - id: bc-0002
+    case_id: tc-1000002-good
+    date: 2026-11-12
+    dimension: hallucination
+    phenomenon: >-
+      首次真实 Judge 运行 hallucination 打 1 分，理由却写"没有出现与需求无关的额外功能或假设"，
+      理由与分数方向矛盾：裁判未理解该维度"分越高越干净"的极性。
+    root_cause: evalset
+    suggested_by: AI 分析
+    confirmed_by: WL2O2O（2026-11-12）
+    status: fixed
+    fix_ref: evaluate.py judge() 评分标准修订（DIM_DEFS + 评审约定2）
 # 示例（注释，非真实条目）：
 # - id: bc-0001
 #   case_id: tc-1000001-good

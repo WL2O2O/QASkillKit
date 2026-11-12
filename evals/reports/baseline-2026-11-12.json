@@ -1,0 +1,152 @@
+{
+  "date": "2026-11-12",
+  "mode": "offline+judge",
+  "evalset_version": 2,
+  "key_source": "EVAL_LLM_API_KEY",
+  "judge_model": "glm-4-flash",
+  "cases": [
+    {
+      "id": "tc-1000001-good",
+      "kind": "positive",
+      "output_src": "../examples/sample-testcase.md",
+      "violations": {},
+      "stats": {
+        "rows": 7,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": true,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "用例覆盖了需求的主要变更点和场景，但缺少了部分边界条件，如第5次错误后的具体锁定逻辑和刷新页面后的锁定状态保持。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例都与需求中的功能点或规则直接相关，没有遗漏或无关的测试内容。"
+        },
+        "consistency": {
+          "score": 5,
+          "reason": "用例间格式、术语、逻辑一致，预期结果具体且可验证，没有发现不一致的地方。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实，所有数据均为示例或占位，没有发现虚构内容。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "pass"
+    },
+    {
+      "id": "tc-1000002-good",
+      "kind": "positive",
+      "output_src": "../demo/1000002-PC后台账户列表系统配置增加入库打码功能.md",
+      "violations": {},
+      "stats": {
+        "rows": 14,
+        "covered": [
+          "①",
+          "②",
+          "③",
+          "④",
+          "⑤"
+        ]
+      },
+      "rule_pass": true,
+      "judge": {
+        "coverage": {
+          "score": 5,
+          "reason": "用例覆盖了所有变更点，包括新增分组、配置项、弹窗、保存校验、默认值和按钮防抖等，粒度合理。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "每个用例都直接对应需求中的功能点或规则，没有遗漏或无关的测试点。"
+        },
+        "consistency": {
+          "score": 5,
+          "reason": "用例间格式、术语、逻辑一致，预期结果具体可验证，没有发现不一致的地方。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实，所有内容都与需求原文一致。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "pass"
+    },
+    {
+      "id": "tc-1000001-negative",
+      "kind": "negative-control",
+      "output_src": "fixtures/1000001-bad-output.md",
+      "violations": {
+        "format_columns": [
+          "行4 列数8≠9"
+        ],
+        "priority_valid": [
+          "行1 优先级'P5'非法"
+        ],
+        "no_jump_refs": [
+          "行2 前置条件含跳转引用"
+        ],
+        "expected_non_empty": [
+          "行3 预期结果为空"
+        ],
+        "no_secrets": [
+          "行5 前置条件含虚构凭证/内网地址"
+        ],
+        "coverage": [
+          "变更点③未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 5,
+        "covered": [
+          "①",
+          "②"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "用例覆盖了主要变更点，但缺少了管理员后台查看计数的用例，未覆盖变更点5。"
+        },
+        "relevance": {
+          "score": 4,
+          "reason": "用例与需求中的功能点相关，但测试用例中的负向对照样本（故意写坏的样本）与需求无关。"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例格式、术语和逻辑基本一致，预期结果具体可验证，但负向对照样本的预期结果未明确标注。"
+        },
+        "hallucination": {
+          "score": 1,
+          "reason": "负向对照样本中虚构了非法优先级、跳转引用、空预期、列数缺失、虚构凭证等，不符合评审约定。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    }
+  ],
+  "aggregates": {
+    "rule_compliance": {
+      "format_columns": 1.0,
+      "priority_valid": 1.0,
+      "traceability": 1.0,
+      "no_jump_refs": 1.0,
+      "expected_non_empty": 1.0,
+      "no_secrets": 1.0,
+      "change_section": 1.0,
+      "coverage": 1.0
+    },
+    "change_point_coverage": [
+      8,
+      8
+    ],
+    "discrimination_ok": true,
+    "exit_ok": true
+  }
+}

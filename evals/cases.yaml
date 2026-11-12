@@ -2,7 +2,7 @@
 # 公开入口：无需 TAPD/数据库，clone 即跑。路径相对 evals/ 目录。
 meta:
   name: testcase-generator-evalset
-  version: 1
+  version: 2   # v2：judge 评分标准修订（bc-0001/0002）；v1 原始报告见 reports/calibration-2026-11-12-before.*
   sut_prompt: prompts/testcase-generator.public.md
   judge:
     dimensions: [coverage, relevance, consistency, hallucination]

@@ -4,6 +4,10 @@
   🌐 <a href="README.md">中文</a> · <a href="README.en.md">English</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/WL2O2O/QASkillKit/actions/workflows/evals.yml"><img src="https://github.com/WL2O2O/QASkillKit/actions/workflows/evals.yml/badge.svg" alt="evals CI"></a>
+</p>
+
 > **QA 全流程 AI 技能包：从原型图到可追溯测试用例**——多轨 OCR 识别需求图 → 自动生成用例（关联变更点）→ 用例与原型逐条一致性核查 → UI 自动化执行回填 → 规范化缺陷/验收报告。
 >
 > **真实数据驱动，杜绝 AI 幻觉** · **纯 Skill 驱动，零框架代码**——全部能力以 Markdown 技能文档（SKILL.md）+ 少量固化脚本沉淀，可读、可改、可进化。
