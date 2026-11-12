@@ -2,7 +2,7 @@
 # QASkillKit 本地提交门禁：commit 前自动跑两层检查。
 #   层1 登记评测：cases.yaml 在册用例跑 8 项规则（+负向对照自测）
 #   层2 全仓扫描：用例目录所有 MD 跑 6 项结构规则（未登记的也守）
-# 强制零 key（秒级、结果确定）；失败挡住提交并打印违规明细。
+# 强制零 key（秒级、结果确定）；失败挡住提交，只列挡路条目（--brief），不刷整份报告。
 # 报告写入临时目录，不碰 evals/reports/ 里的正式基线。
 # 安装：cp evals/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
 # 说明见 evals/README.md「本地提交门禁」。急事跳过（不建议常用）：git commit --no-verify
@@ -11,12 +11,14 @@ cd "$root" || exit 1
 unset EVAL_LLM_API_KEY GLM_API_KEY OPENAI_API_KEY
 tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
-python3 evals/evaluate.py --out "$tmp" >"$tmp/log" 2>&1; e1=$?
-python3 evals/evaluate.py --scan --out "$tmp" >"$tmp/scanlog" 2>&1; e2=$?
+out1=$(python3 evals/evaluate.py --brief --out "$tmp" 2>&1); e1=$?
+out2=$(python3 evals/evaluate.py --scan --brief --out "$tmp" 2>&1); e2=$?
 if [ "$e1" -eq 0 ] && [ "$e2" -eq 0 ]; then
   echo "✅ pre-commit 评测通过（登记评测 + 全仓结构扫描）"
   exit 0
 fi
-echo "❌ pre-commit 评测未通过，本次提交被挡住。明细："
-cat "$tmp"/baseline-*.md "$tmp"/scan-*.md 2>/dev/null
+echo "❌ pre-commit 评测未通过，本次提交被挡住："
+[ -n "$out1" ] && printf '%s\n' "$out1"
+[ -n "$out2" ] && printf '%s\n' "$out2"
+echo "完整报告可跑：python3 evals/evaluate.py（加 --scan 看全仓扫描）"
 exit 1

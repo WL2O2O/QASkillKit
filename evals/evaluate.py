@@ -187,6 +187,8 @@ def main():
     ap.add_argument("--live", action="store_true", help="SUT 现场生成用例再评测（需 key）")
     ap.add_argument("--scan", action="store_true",
                     help="全仓结构扫描：用例目录所有 MD 跑 6 项结构规则（无需登记、无需 key）")
+    ap.add_argument("--brief", action="store_true",
+                    help="失败时只打印挡路条目（钩子/CI 简洁输出），不打印完整报告")
     ap.add_argument("--sut-model", default=os.environ.get("EVAL_LLM_MODEL", "glm-4-flash"))
     ap.add_argument("--judge-model", default=os.environ.get("EVAL_JUDGE_MODEL", ""))
     args = ap.parse_args()
@@ -214,8 +216,13 @@ def main():
         else:
             md.append("（全部用例文件结构合规）")
         (out_dir / ("scan-%s.md" % today)).write_text("\n".join(md) + "\n", encoding="utf-8")
-        print("\n".join(md))
-        print("报告已写入：%s/scan-%s.{md,json}" % (out_dir, today))
+        if args.brief:
+            for f in bad:
+                for rule, msgs in f["violations"].items():
+                    print("- 全仓扫描 %s / %s：%s" % (f["path"], rule, "；".join(msgs)))
+        else:
+            print("\n".join(md))
+            print("报告已写入：%s/scan-%s.{md,json}" % (out_dir, today))
         sys.exit(0 if not bad else 1)
 
     cfg = yaml.safe_load(Path(args.eval_set).read_text(encoding="utf-8"))
@@ -340,9 +347,20 @@ def main():
     md.append("> 本报告 judge 分数仅作基线参考，方法论见 evals/README.md。")
     (out_dir / ("baseline-%s.md" % today)).write_text("\n".join(md) + "\n", encoding="utf-8")
 
-    print("\n".join(md[:12]))
-    print("报告已写入：%s/baseline-%s.{md,json}" % (out_dir, today))
-    print("exit_ok=%s" % exit_ok)
+    if args.brief:
+        for r in results:
+            if r["kind"] == "positive" and r["verdict"] != "pass":
+                if r["violations"]:
+                    for rule, msgs in r["violations"].items():
+                        print("- 登记评测 %s / %s：%s" % (r["id"], rule, "；".join(msgs)))
+                else:
+                    print("- 登记评测 %s：judge 均分低于及格线" % r["id"])
+            if r["kind"] == "negative-control" and r["verdict"] != "detected":
+                print("- 登记评测 %s：负向对照未全部检出，评测器自身可能坏了" % r["id"])
+    else:
+        print("\n".join(md[:12]))
+        print("报告已写入：%s/baseline-%s.{md,json}" % (out_dir, today))
+        print("exit_ok=%s" % exit_ok)
     sys.exit(0 if exit_ok else 1)
 
 
