@@ -60,10 +60,10 @@ python3 evals/evaluate.py
 ```
 
 <p align="center">
-  <img src="docs/assets/demo-zero-key.png" alt="零 key 试用真实终端输出：负向对照全部检出、变更点覆盖 8/8、两份好用例 pass" width="100%">
+  <img src="docs/assets/demo-zero-key.png" alt="零 key 试用真实终端输出：9 份负向对照全部检出、变更点覆盖 13/13、三份好用例 pass" width="100%">
 </p>
 
-你会看到：仓库自带的 3 份用例，好的 2 份通过，故意写坏的 1 份被揪出全部问题（证明评测器不是橡皮图章），报告存到 `evals/reports/`。
+你会看到：仓库自带的 12 份用例，好的 3 份通过，故意写坏的 9 份全部被揪出（其中 8 份每份只坏一处——8 条规则各有一发"单规则隔离弹"，证明评测器不是橡皮图章），报告存到 `evals/reports/`。
 
 想让 AI 当场写、当场评？`export GLM_API_KEY=你的key` 后跑 `python3 evals/evaluate.py --live`。想喂自己的需求/用例，逐步教程见 [evals/README.md](evals/README.md)。
 

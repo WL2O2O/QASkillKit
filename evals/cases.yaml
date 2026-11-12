@@ -2,7 +2,7 @@
 # 公开入口：无需 TAPD/数据库，clone 即跑。路径相对 evals/ 目录。
 meta:
   name: testcase-generator-evalset
-  version: 2   # v2：judge 评分标准修订（bc-0001/0002）；v1 原始报告见 reports/calibration-2026-11-12-before.*
+  version: 3   # v3：评测集扩充至 12 条（3 正样本 + 9 负向对照，每规则一发单规则隔离弹）；v2 judge 标准修订见 bc-0001/0002；v1 原始报告见 reports/calibration-2026-11-12-before.*
   sut_prompt: prompts/testcase-generator.public.md
   judge:
     dimensions: [coverage, relevance, consistency, hallucination]
@@ -22,6 +22,13 @@ cases:
     output: ../demo/1000002-PC后台账户列表系统配置增加入库打码功能.md
     expected_change_points: ["①", "②", "③", "④", "⑤"]
 
+  # 真实执行版正样本：实际结果列已回填（含 PASS/FAIL/未执行），验证评测器不惩罚执行期内容
+  - id: tc-1020256-executed
+    kind: positive
+    fixture: fixtures/1020256-requirement.md
+    output: ../workspace/testcases/sprint100/demo1.md
+    expected_change_points: ["①", "②", "③", "④", "⑤"]
+
   # 负向对照：故意写坏的样本，评测器必须检出以下违规（判别力自测）
   - id: tc-1000001-negative
     kind: negative-control
@@ -35,3 +42,61 @@ cases:
       - format_columns
       - no_secrets
       - coverage
+
+  # 单规则隔离负向对照（v3 扩充）：每份只坏一处，证明 8 条规则各自独立可检出，
+  # 排除"混合样本里某规则搭便车才被触发"的可能。均基于虚构需求 1000001。
+  - id: tc-neg-format
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-format.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [format_columns]
+
+  - id: tc-neg-priority
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-priority.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [priority_valid]
+
+  - id: tc-neg-traceability
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-traceability.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [traceability]
+
+  - id: tc-neg-jump-refs
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-jump-refs.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [no_jump_refs]
+
+  - id: tc-neg-expected-empty
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-expected-empty.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [expected_non_empty]
+
+  - id: tc-neg-secrets
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-secrets.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [no_secrets]
+
+  - id: tc-neg-change-section
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-change-section.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [change_section]
+
+  - id: tc-neg-coverage
+    kind: negative-control
+    fixture: fixtures/1000001-requirement.md
+    output: fixtures/neg-coverage.md
+    expected_change_points: ["①", "②", "③"]
+    expect_violations: [coverage]

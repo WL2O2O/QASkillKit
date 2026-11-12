@@ -263,6 +263,24 @@ class TestDiscrimination:
             bad = {r: msgs for r, msgs in v.items() if msgs}
             assert not bad, "%s 出现违规（正样本保证被破坏）: %s" % (c["id"], bad)
 
+    def test_every_rule_has_isolated_negative(self, cfg):
+        # v3 设计：8 条规则每条都有一发"单规则隔离弹"（expect_violations 只登记一条）
+        isolated = {c["expect_violations"][0] for c in cfg["cases"]
+                    if c["kind"] == "negative-control" and len(c["expect_violations"]) == 1}
+        assert isolated == set(evaluate.RULES), "缺隔离负向对照的规则: %s" % (
+            set(evaluate.RULES) - isolated)
+
+    def test_isolated_negatives_violate_only_target_rule(self, cfg):
+        # 隔离纯度：单规则负向对照必须"只坏一处"，多触发任何规则都算设计被破坏
+        for c in cfg["cases"]:
+            if c["kind"] != "negative-control" or len(c["expect_violations"]) != 1:
+                continue
+            output = (EVAL_DIR / c["output"]).read_text(encoding="utf-8")
+            v, _ = evaluate.rule_check(output, c["expected_change_points"])
+            detected = {r for r in evaluate.RULES if v[r]}
+            assert detected == set(c["expect_violations"]), "%s 隔离不纯: 实际触发 %s" % (
+                c["id"], detected)
+
 
 # ---------- 6. 工具函数 ----------
 

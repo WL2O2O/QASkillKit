@@ -17,7 +17,7 @@
 | 10 | 回归对比命令 | README 称"两次 JSON 对比即回归报告"但需人肉 diff。加 `--diff 报告1.json 报告2.json` 输出逐用例逐规则变好/变坏 | done |
 | 11 | 报告同日覆盖保护 | evaluate.py 按 `baseline-<日期>` 写报告，同日重跑直接覆盖：先带 key 跑出 Judge 基线、再零 key 重跑，Judge 基线会被规则版悄悄顶掉（git 里有存档可恢复，但本地是坑）。建议文件名加时分秒或覆盖前提示 | done |
 
-> 已在路线图、不重复列：A/B prompt 回归演示、评测集扩到 8-10 条。
+> 已在路线图、不重复列：A/B prompt 回归演示（--diff 工具已就位，待做）；评测集扩充已完成（12 条，见下方落地记录）。
 > 诚实提醒：第 7/8 条增加曝光，但星星增速取决于内容质量与运气，不编预期数字。
 
 ## 第 1 条落地记录（2026-11-12）
@@ -44,3 +44,13 @@
 - 新增 16 条 pytest（report_stem 命名 + diff 语义全套 + 真实基线锚点：11-11 vs 11-12 必须零退步），总数 74 条；
 - 真实验证：校准前 v1 vs 修复后 v2 基线 diff 输出"变好 9 项"（fail→pass、hallucination 1→5），与校准实录完全吻合；负向对照 2→1 正确落入抖动说明；
 - 文档同步：evals/README 新增「回归对比」节（含真实输出节选）+ 报告命名说明，中英 README 各加一句，testcase-evaluator SKILL.md 模式表加 --diff 行。
+
+## 评测集扩充落地记录（2026-11-13，v2 → v3，12 条）
+
+- 构成：3 正样本（新增 tc-1020256-executed：真实执行版，实际结果列已回填 PASS/FAIL/未执行，验证评测器不惩罚执行期内容）+ 1 混合负向对照（原 tc-1000001-negative）+ 8 单规则隔离负向对照（每份只坏一处，8 条规则各一发）；
+- 隔离设计要点：隔离弹里"被坏行"覆盖的变更点由其他行兜住，避免误触发 coverage；neg-change-section 全文（含注释）刻意避开"变更点"触发词——change_section 规则按关键词存在性检查，这是写第 9 条测试时发现的真实语义；
+- 隔离纯度由 pytest 锁定：test_isolated_negatives_violate_only_target_rule 断言 detected == expect（恰好一条，不多不少）；test_every_rule_has_isolated_negative 断言 8 条规则全覆盖；
+- 新 fixture：fixtures/1020256-requirement.md（需求文字提炼自 demo1.md 头部概述，不含执行期内网标识）+ fixtures/neg-*.md 8 份（均基于虚构需求 1000001）；demo1.md 本体只读引用，未改动；
+- 基线：reports/baseline-2026-11-13-063552.*（v3 零 key，13/13 覆盖、9/9 检出、exit 0）；--diff v2→v3 零退步（覆盖 8/8→13/13 判变好，新用例进说明桶）；
+- 待办：新样本 Judge 基线待 export key 重跑 + 抽样校准（evals/README 已注明）；
+- 文档同步：中英 README 轨道 A 文案与 demo-zero-key 配图按 v3 真实输出重渲染，evals/README 情况 1/校准节/基线诚实声明更新。

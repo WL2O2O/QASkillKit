@@ -45,7 +45,7 @@ pip install pyyaml
 python3 evals/evaluate.py
 ```
 
-You'll see: of the 3 bundled case files, the 2 good ones pass and the intentionally bad one has every violation flagged (the evaluator is no rubber stamp). Reports land in `evals/reports/`.
+You'll see: of the 12 bundled case files, the 3 good ones pass and all 9 intentionally broken ones get flagged — 8 of them break exactly one rule each (one dedicated detection sample per rule), so the evaluator is no rubber stamp. Reports land in `evals/reports/`.
 
 Want the AI to write cases on the fly and grade them? `export GLM_API_KEY=your_key`, then run `python3 evals/evaluate.py --live`. To feed in your own requirements or case files, follow the step-by-step guide in [evals/README.md](evals/README.md).
 
