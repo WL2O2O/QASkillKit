@@ -133,7 +133,34 @@ export GLM_API_KEY=你的key               # ② 有 key：AI 用需求文字当
 python3 evals/evaluate.py --live
 ```
 
-③ 团队有 TAPD：真实 skill 生成用例后，喂进来用同一套标准改。**有自己的需求文字？** 放 `evals/fixtures/`、在 `evals/cases.yaml` 登记一条就能改。三种情况的逐步教程见 [evals/README.md](evals/README.md)。
+③ 团队有 TAPD：真实 skill 生成用例后，喂进来用同一套标准改。**有自己的需求文字？** 一条命令登记：`python3 evals/evaluate.py --add 你的用例.md --fixture 你的需求.md --points ①②`，免手写 YAML。三种情况的逐步教程见 [evals/README.md](evals/README.md)。
+
+**报告长什么样**（真实基线节选：好的 2 份通过，故意写坏的 1 份被全部检出；完整版在 `evals/reports/`）：
+
+```markdown
+# 评测基线报告 2026-11-12（offline+judge）
+
+- 评测集版本：2；Judge：启用（glm-4-flash，key 来源 EVAL_LLM_API_KEY）
+- 判别力自测（负向对照）：✅ 全部检出
+- 变更点覆盖：8/8
+
+## 用例级结果
+
+| case | 类型 | 规则通道 | Judge | 结论 |
+|:---|:---|:---|:---|:---|
+| tc-1000001-good | positive | ✅ | 4.8 | pass |
+| tc-1000002-good | positive | ✅ | 5.0 | pass |
+| tc-1000001-negative | negative-control | ❌ | 3.0 | detected |
+
+……
+
+## 违规明细与建议根因（根因须人工确认，见 badcases.yaml）
+
+- **tc-1000001-negative / priority_valid**（建议根因：prompt）：行1 优先级'P5'非法
+- **tc-1000001-negative / no_jump_refs**（建议根因：prompt）：行2 前置条件含跳转引用
+- **tc-1000001-negative / coverage**（建议根因：prompt）：变更点③未被任何用例覆盖
+……
+```
 
 ## 🔒 隐私与脱敏设计
 

@@ -10,6 +10,8 @@
   python3 evals/evaluate.py                 # 离线评测内置脱敏产出（零 key 可跑）
   python3 evals/evaluate.py --live          # 先让 SUT prompt 现场生成用例再评测（需 key）
   python3 evals/evaluate.py --scan          # 全仓结构扫描：用例目录所有 MD 跑 6 项结构规则（零 key）
+  python3 evals/evaluate.py --scan --scan-root DIR  # 扫自定义用例目录（可多次指定）
+  python3 evals/evaluate.py --add 用例.md --fixture 需求.md --points ①②  # 一键登记自己的用例
   python3 evals/evaluate.py --out DIR       # 报告输出目录（默认 evals/reports）
 
 环境变量（key 只从环境读，不落盘）：
@@ -25,6 +27,7 @@ import datetime
 import json
 import os
 import re
+import shutil
 import sys
 import urllib.request
 from pathlib import Path
@@ -112,17 +115,19 @@ def rule_check(text, expected_points):
 
 # 全仓结构扫描：不需要需求原文/登记就能查的 6 项结构规则。
 # 覆盖度与变更点说明依赖 fixture/expected_points，留给登记评测，不在扫描范围。
-# 扫描根 = 项目约定的用例存放目录；evals/fixtures 的负向对照故意写坏，不扫。
+# 扫描根 = 项目约定的用例存放目录（--scan-root 可覆盖）；evals/fixtures 的负向对照故意写坏，不扫。
 SCAN_ROOTS = ["workspace/testcases", "examples", "demo"]
 SCAN_RULES = ["format_columns", "priority_valid", "traceability",
               "no_jump_refs", "expected_non_empty", "no_secrets"]
 
 
-def scan_repo():
+def scan_repo(roots=None):
     """扫描用例目录下所有含用例表的 MD，返回逐文件结构违规。"""
     results = []
-    for root in SCAN_ROOTS:
-        base = ROOT / root
+    for root in (roots if roots is not None else SCAN_ROOTS):
+        base = Path(root)
+        if not base.is_absolute():
+            base = ROOT / root
         if not base.is_dir():
             continue
         for path in sorted(base.rglob("*.md")):
@@ -130,8 +135,12 @@ def scan_repo():
             if not parse_case_tables(text):
                 continue  # 不含用例表的 MD（说明文档等）跳过
             v, stats = rule_check(text, [])
+            try:
+                rel = str(path.relative_to(ROOT))
+            except ValueError:
+                rel = str(path)  # 仓库外的自定义扫描根：记绝对路径
             results.append({
-                "path": str(path.relative_to(ROOT)),
+                "path": rel,
                 "rows": stats["rows"],
                 "violations": {r: v[r] for r in SCAN_RULES if v[r]},
             })
@@ -180,6 +189,85 @@ def resolve_key():
     return None, None
 
 
+POINT_CHARS = "①②③④⑤⑥⑦⑧⑨⑩"
+
+
+def add_case(args):
+    """一键登记：校验用例 → 需求拷入 fixtures/ → 追加 cases.yaml（文本追加以保留注释）。"""
+    case_path = Path(args.add).resolve()
+    if not case_path.is_file():
+        sys.exit("--add: 用例文件不存在：%s" % case_path)
+    if not args.fixture:
+        sys.exit("--add 还需要 --fixture 指定需求文字文件（裁判要对照需求打分）")
+    fixture_path = Path(args.fixture).resolve()
+    if not fixture_path.is_file():
+        sys.exit("--fixture: 需求文件不存在：%s" % fixture_path)
+    text = case_path.read_text(encoding="utf-8")
+    if not parse_case_tables(text):
+        sys.exit("--add: 用例文件里没找到用例表（表头含「优先级」「预期结果」的表格）")
+
+    # 变更点：显式 --points 优先；否则从「变更点说明」表首列自动提取
+    points = [ch for ch in args.points if ch in POINT_CHARS]
+    if not points:
+        for line in text.splitlines():
+            s = line.strip()
+            if s.startswith("|"):
+                first = s.strip("|").split("|")[0].strip()
+                if len(first) == 1 and first in POINT_CHARS and first not in points:
+                    points.append(first)
+
+    eval_set = Path(args.eval_set)
+    cfg = yaml.safe_load(eval_set.read_text(encoding="utf-8"))
+    existing = {c["id"] for c in cfg["cases"]}
+    cid = args.id or ("tc-" + case_path.stem)
+    cid = re.sub(r"[^\w-]+", "-", cid).strip("-") or "tc-added"
+    base_id, n = cid, 2
+    while cid in existing:
+        cid = "%s-%d" % (base_id, n)
+        n += 1
+
+    # 需求文件：不在 evals/fixtures/ 下就拷一份进去（评测集自包含）；同名同内容复用
+    fixtures_dir = EVAL_DIR / "fixtures"
+    fixtures_dir.mkdir(exist_ok=True)
+    if fixture_path.parent == fixtures_dir:
+        dest = fixture_path
+    else:
+        dest = fixtures_dir / fixture_path.name
+        n = 2
+        while dest.exists() and dest.read_bytes() != fixture_path.read_bytes():
+            dest = fixtures_dir / ("%s-%d%s" % (fixture_path.stem, n, fixture_path.suffix))
+            n += 1
+        if not dest.exists():
+            shutil.copyfile(fixture_path, dest)
+    fixture_rel = dest.relative_to(EVAL_DIR).as_posix()
+    output_rel = Path(os.path.relpath(case_path, EVAL_DIR)).as_posix()
+
+    # 文本追加（yaml.dump 会丢掉已有注释）；追加后整体校验，失败则不写
+    original = eval_set.read_text(encoding="utf-8")
+    if not original.endswith("\n"):
+        original += "\n"
+    block = ("\n  - id: %s\n    kind: positive\n    fixture: %s\n    output: %s\n"
+             "    expected_change_points: [%s]\n" % (
+                 cid, fixture_rel, output_rel, ", ".join('"%s"' % p for p in points)))
+    updated = original + block
+    try:
+        check = yaml.safe_load(updated)
+        if not any(c["id"] == cid for c in check["cases"]):
+            raise ValueError("新条目没落进 cases 列表（评测集的 cases: 须是最后一个顶层键）")
+    except Exception as e:
+        sys.exit("--add: 追加后 YAML 校验失败，文件未改动：%s" % e)
+    eval_set.write_text(updated, encoding="utf-8")
+
+    print("✅ 已登记 %s" % cid)
+    print("   需求：%s" % fixture_rel)
+    print("   用例：%s" % output_rel)
+    print("   变更点：%s" % (" ".join(points) if points
+                          else "无（覆盖度检查暂跳过，可稍后在 cases.yaml 补 expected_change_points）"))
+    print("   现在跑：python3 evals/evaluate.py")
+    print("⚠️ 本仓库公开：请确认需求与用例已脱敏（无实名/内网地址/账号密码）")
+    sys.exit(0)
+
+
 def main():
     ap = argparse.ArgumentParser(description="QASkillKit 双通道评测器")
     ap.add_argument("--eval-set", default=str(EVAL_DIR / "cases.yaml"))
@@ -191,21 +279,38 @@ def main():
                     help="失败时只打印挡路条目（钩子/CI 简洁输出），不打印完整报告")
     ap.add_argument("--sut-model", default=os.environ.get("EVAL_LLM_MODEL", "glm-4-flash"))
     ap.add_argument("--judge-model", default=os.environ.get("EVAL_JUDGE_MODEL", ""))
+    ap.add_argument("--add", metavar="CASE_MD",
+                    help="一键登记自己的用例（配合 --fixture/--points，免手写 YAML）")
+    ap.add_argument("--fixture", metavar="REQ_MD",
+                    help="需求文字文件（--add 用，自动拷入 evals/fixtures/）")
+    ap.add_argument("--points", default="",
+                    help="变更点编号如 ①②③（--add 用；省略时从用例的变更点说明表自动提取）")
+    ap.add_argument("--id", default="", help="登记 id（--add 可选，默认取用例文件名）")
+    ap.add_argument("--scan-root", action="append", metavar="DIR",
+                    help="自定义扫描根（--scan 用，可多次；默认项目约定目录）")
     args = ap.parse_args()
 
+    if args.add:
+        add_case(args)
+
     if args.scan:
-        files = scan_repo()
+        roots = args.scan_root or SCAN_ROOTS
+        for r in (args.scan_root or []):
+            base = Path(r) if Path(r).is_absolute() else ROOT / r
+            if not base.is_dir():
+                sys.exit("扫描根不存在：%s" % r)
+        files = scan_repo(roots)
         bad = [f for f in files if f["violations"]]
         today = datetime.date.today().isoformat()
         out_dir = Path(args.out)
         out_dir.mkdir(parents=True, exist_ok=True)
-        scan = {"date": today, "mode": "scan", "roots": SCAN_ROOTS, "files": files,
+        scan = {"date": today, "mode": "scan", "roots": roots, "files": files,
                 "aggregates": {"files_scanned": len(files),
                                "files_violating": len(bad), "exit_ok": not bad}}
         (out_dir / ("scan-%s.json" % today)).write_text(
             json.dumps(scan, ensure_ascii=False, indent=2), encoding="utf-8")
         md = ["# 全仓结构扫描报告 %s" % today, "",
-              "- 扫描根：%s" % ", ".join(SCAN_ROOTS),
+              "- 扫描根：%s" % ", ".join(roots),
               "- 用例文件 %d 份，违规 %d 份" % (len(files), len(bad)), ""]
         if bad:
             md.append("## 违规明细")

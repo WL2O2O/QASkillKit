@@ -37,7 +37,7 @@ description: >
 | :--- | :--- | :--- |
 | 跑评测 / 评登记集 | `python3 evals/evaluate.py` | 在册用例 8 项规则 + 负向对照自测；有 key 加裁判 |
 | 全仓扫 / 检查所有用例文件 | `python3 evals/evaluate.py --scan` | 6 项结构规则，未登记文件也守 |
-| 评指定的未登记文件 | 先 `--scan` 看结构层 | 内容评（覆盖度/裁判）需登记：引导按 evals/README 情况 2 第 2 步补 fixture + expected_change_points |
+| 评指定的未登记文件 | 先 `--scan` 看结构层（仓库外目录用 `--scan-root`） | 内容评（覆盖度/裁判）需登记：`--add 用例 --fixture 需求 --points ①②` 一条命令，见 evals/README 情况 2 |
 | 让 AI 现场写再评 | `python3 evals/evaluate.py --live` | 需 key；简化版（只看文字，无原型图/数据库） |
 | 换模型/换厂商 | 环境 `EVAL_LLM_BASE_URL`/`EVAL_LLM_MODEL` 或 `--judge-model` | 任何 OpenAI 兼容接口 |
 

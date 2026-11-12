@@ -91,6 +91,29 @@ python3 evals/evaluate.py        # zero keys: rule channel + bundled desensitize
 
 Provide any OpenAI-compatible key (e.g. `GLM_API_KEY`) to enable the LLM-as-Judge channel; `--live` makes the SUT prompt generate cases on the fly before evaluation. The eval set includes a **negative control** (intentionally bad output) that the evaluator must fully detect; the exit code is CI-ready for prompt regression. See [evals/README.md](evals/README.md).
 
+**Bring your own cases** — register with one command, no hand-written YAML:
+
+```bash
+python3 evals/evaluate.py --add path/to/cases.md --fixture path/to/requirement.md --points ①②
+```
+
+**What the report looks like** (excerpt from a real baseline; reports are currently in Chinese; full versions in `evals/reports/`):
+
+```markdown
+# 评测基线报告 2026-11-12（offline+judge）
+- 判别力自测（负向对照）：✅ 全部检出
+- 变更点覆盖：8/8
+
+| case | 类型 | 规则通道 | Judge | 结论 |
+|:---|:---|:---|:---|:---|
+| tc-1000001-good | positive | ✅ | 4.8 | pass |
+| tc-1000002-good | positive | ✅ | 5.0 | pass |
+| tc-1000001-negative | negative-control | ❌ | 3.0 | detected |
+
+- **tc-1000001-negative / priority_valid**：行1 优先级'P5'非法
+- **tc-1000001-negative / coverage**：变更点③未被任何用例覆盖
+```
+
 ## 🏗️ Architecture
 
 ```mermaid
