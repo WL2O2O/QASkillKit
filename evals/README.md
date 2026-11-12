@@ -99,7 +99,33 @@ AI 裁判第一次真实打分，抓出的竟是**裁判自己的问题**——�
 
 - `evals/reports/baseline-日期.md`：给人看的报告；
 - 同名 `.json`：给机器看的，两次运行对比差异就是回归报告；
-- 命令退出码 0 = 全过，1 = 有失败。仓库已挂好 CI（`.github/workflows/evals.yml`）：每次 push/PR 自动跑规则通道（零 key），失败挡合并，README 顶部有徽章。Judge 通道不在 CI 跑（不在 CI 存 key），本地 export key 即可启用。
+- 命令退出码 0 = 全过，1 = 有失败。仓库已挂好 CI（`.github/workflows/evals.yml`）：每次 push/PR 自动跑登记评测 + 全仓扫描两层（零 key），失败亮红叉（配合分支保护可挡合并），README 顶部有徽章。Judge 通道不在 CI 跑（不在 CI 存 key），本地 export key 即可启用。
+
+## 全仓结构扫描（--scan）
+
+登记评测只守"在册作业"；扫描层守**所有**用例文件，未登记的也跑不掉：
+
+```bash
+python3 evals/evaluate.py --scan
+```
+
+- 扫描根：`workspace/testcases/`、`examples/`、`demo/`（项目约定的用例存放目录），递归扫所有含用例表的 MD；
+- 查 6 项不需要需求原文的结构规则：9 列格式、P0/P1/P2、关联引用非空、无跳转引用、预期结果非空、无虚构凭证；
+- 覆盖度与变更点说明依赖需求原文，留给登记评测；`evals/fixtures/` 里故意写坏的负向对照不扫；
+- 钩子和 CI 都跑"登记评测 + 扫描"两层：结构问题全仓拦，内容质量登记评。
+
+## 本地提交门禁（pre-commit 钩子，可选）
+
+CI 在推送后才在云端跑；想在**本地提交时**就自动检测，装个钩子：
+
+```bash
+cp evals/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+效果：每次 commit 前自动跑两层检查——登记评测（在册用例 8 项规则 + 负向对照自测）与全仓结构扫描（所有用例 MD 的 6 项结构规则）；强制零 key，秒级；报告写临时目录，不碰正式基线。通过放行，失败挡住提交并打印违规明细（哪份用例、哪一行、犯哪条规则）。
+注意：登记评测只检查 `cases.yaml` 登记在册的用例（评分需要配套的需求原文与变更点，见情况 2 第 2 步）；未登记文件由扫描层守结构。
+钩子装在本地 `.git/hooks/`，不进仓库、换电脑要重装；急事可 `git commit --no-verify` 跳过（不建议常用）。
 
 ## 改出不合格怎么办
 

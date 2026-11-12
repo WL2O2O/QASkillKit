@@ -9,6 +9,7 @@
 用法：
   python3 evals/evaluate.py                 # 离线评测内置脱敏产出（零 key 可跑）
   python3 evals/evaluate.py --live          # 先让 SUT prompt 现场生成用例再评测（需 key）
+  python3 evals/evaluate.py --scan          # 全仓结构扫描：用例目录所有 MD 跑 6 项结构规则（零 key）
   python3 evals/evaluate.py --out DIR       # 报告输出目录（默认 evals/reports）
 
 环境变量（key 只从环境读，不落盘）：
@@ -109,6 +110,34 @@ def rule_check(text, expected_points):
     return v, {"rows": len(rows), "covered": sorted(covered)}
 
 
+# 全仓结构扫描：不需要需求原文/登记就能查的 6 项结构规则。
+# 覆盖度与变更点说明依赖 fixture/expected_points，留给登记评测，不在扫描范围。
+# 扫描根 = 项目约定的用例存放目录；evals/fixtures 的负向对照故意写坏，不扫。
+SCAN_ROOTS = ["workspace/testcases", "examples", "demo"]
+SCAN_RULES = ["format_columns", "priority_valid", "traceability",
+              "no_jump_refs", "expected_non_empty", "no_secrets"]
+
+
+def scan_repo():
+    """扫描用例目录下所有含用例表的 MD，返回逐文件结构违规。"""
+    results = []
+    for root in SCAN_ROOTS:
+        base = ROOT / root
+        if not base.is_dir():
+            continue
+        for path in sorted(base.rglob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            if not parse_case_tables(text):
+                continue  # 不含用例表的 MD（说明文档等）跳过
+            v, stats = rule_check(text, [])
+            results.append({
+                "path": str(path.relative_to(ROOT)),
+                "rows": stats["rows"],
+                "violations": {r: v[r] for r in SCAN_RULES if v[r]},
+            })
+    return results
+
+
 def llm_chat(messages, model, base, key):
     req = urllib.request.Request(
         base.rstrip("/") + "/chat/completions",
@@ -156,9 +185,38 @@ def main():
     ap.add_argument("--eval-set", default=str(EVAL_DIR / "cases.yaml"))
     ap.add_argument("--out", default=str(EVAL_DIR / "reports"))
     ap.add_argument("--live", action="store_true", help="SUT 现场生成用例再评测（需 key）")
+    ap.add_argument("--scan", action="store_true",
+                    help="全仓结构扫描：用例目录所有 MD 跑 6 项结构规则（无需登记、无需 key）")
     ap.add_argument("--sut-model", default=os.environ.get("EVAL_LLM_MODEL", "glm-4-flash"))
     ap.add_argument("--judge-model", default=os.environ.get("EVAL_JUDGE_MODEL", ""))
     args = ap.parse_args()
+
+    if args.scan:
+        files = scan_repo()
+        bad = [f for f in files if f["violations"]]
+        today = datetime.date.today().isoformat()
+        out_dir = Path(args.out)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        scan = {"date": today, "mode": "scan", "roots": SCAN_ROOTS, "files": files,
+                "aggregates": {"files_scanned": len(files),
+                               "files_violating": len(bad), "exit_ok": not bad}}
+        (out_dir / ("scan-%s.json" % today)).write_text(
+            json.dumps(scan, ensure_ascii=False, indent=2), encoding="utf-8")
+        md = ["# 全仓结构扫描报告 %s" % today, "",
+              "- 扫描根：%s" % ", ".join(SCAN_ROOTS),
+              "- 用例文件 %d 份，违规 %d 份" % (len(files), len(bad)), ""]
+        if bad:
+            md.append("## 违规明细")
+            md.append("")
+            for f in bad:
+                for rule, msgs in f["violations"].items():
+                    md.append("- **%s / %s**：%s" % (f["path"], rule, "；".join(msgs)))
+        else:
+            md.append("（全部用例文件结构合规）")
+        (out_dir / ("scan-%s.md" % today)).write_text("\n".join(md) + "\n", encoding="utf-8")
+        print("\n".join(md))
+        print("报告已写入：%s/scan-%s.{md,json}" % (out_dir, today))
+        sys.exit(0 if not bad else 1)
 
     cfg = yaml.safe_load(Path(args.eval_set).read_text(encoding="utf-8"))
     jcfg = cfg["meta"]["judge"]

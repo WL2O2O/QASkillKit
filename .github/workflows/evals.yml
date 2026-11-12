@@ -20,6 +20,8 @@ jobs:
         run: pip install pyyaml
       - name: Run evaluator (rule channel, no key)
         run: python3 evals/evaluate.py
+      - name: Whole-repo structural scan (no key)
+        run: python3 evals/evaluate.py --scan
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
