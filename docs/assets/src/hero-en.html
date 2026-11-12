@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1400px;height:400px;overflow:hidden}
+body{font-family:"SF Pro Display",-apple-system,"Segoe UI","PingFang SC",sans-serif;background:#0A0F1E;color:#E8EDF7;position:relative}
+.bg{position:absolute;inset:0;background:
+ radial-gradient(900px 520px at 10% -12%,rgba(99,102,241,.28),transparent 62%),
+ radial-gradient(820px 500px at 96% 4%,rgba(34,211,238,.17),transparent 60%),
+ radial-gradient(760px 520px at 55% 118%,rgba(52,211,153,.13),transparent 62%),
+ linear-gradient(158deg,#0B1122 0%,#0A0F1E 55%,#0C1424 100%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.055) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 45% 42%,#000 28%,transparent 76%)}
+.orb{position:absolute;border-radius:50%;filter:blur(2px)}
+.wrap{position:relative;padding:52px 64px;height:100%}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:14px;letter-spacing:.22em;color:#A5B4FC;border:1px solid rgba(129,140,248,.35);background:rgba(99,102,241,.12);padding:7px 16px;border-radius:999px;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 10px #4ADE80}
+h1{font-size:78px;font-weight:800;letter-spacing:-.01em;margin:18px 0 10px;background:linear-gradient(92deg,#E0E7FF 0%,#A5B4FC 34%,#818CF8 58%,#22D3EE 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tag{font-size:23px;color:#DCE4F5;font-weight:600}
+.sub{font-size:15.5px;color:#8B96B0;margin-top:9px;letter-spacing:.02em}
+.cta{position:absolute;left:64px;bottom:44px;display:inline-flex;align-items:center;gap:12px;padding:11px 20px;border-radius:12px;border:1px solid rgba(74,222,128,.4);background:rgba(52,211,153,.1);box-shadow:0 0 24px rgba(52,211,153,.12)}
+.cta .play{color:#4ADE80;font-size:14px}
+.cta code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:14.5px;color:#BBF7D0}
+.cta .lbl{font-size:14px;color:#86EFAC;font-weight:600}
+.stats{position:absolute;right:64px;top:64px;display:grid;grid-template-columns:172px 172px;gap:14px}
+.stat{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(148,163,184,.18);border-radius:14px;padding:16px 18px;box-shadow:0 14px 30px rgba(2,6,23,.4)}
+.stat b{display:block;font-size:32px;font-weight:800;background:linear-gradient(92deg,#A5B4FC,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat span{font-size:12.5px;color:#93A0B8}
+.stat.g b{background:linear-gradient(92deg,#4ADE80,#22D3EE);-webkit-background-clip:text;background-clip:text}
+.stat.a b{background:linear-gradient(92deg,#FBBF24,#F87171);-webkit-background-clip:text;background-clip:text}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grid"></div>
+<div class="orb" style="width:10px;height:10px;left:620px;top:70px;background:#22D3EE;box-shadow:0 0 18px #22D3EE"></div>
+<div class="orb" style="width:7px;height:7px;left:700px;top:300px;background:#818CF8;box-shadow:0 0 16px #818CF8"></div>
+<div class="orb" style="width:8px;height:8px;left:560px;top:200px;background:#4ADE80;box-shadow:0 0 16px #4ADE80"></div>
+<div class="wrap">
+  <span class="eyebrow"><span class="dot"></span>QA × AI AGENT SKILLS</span>
+  <h1>QASkillKit</h1>
+  <div class="tag">The QA workflow AI skill toolkit · prototypes → traceable test cases</div>
+  <div class="sub">Real data, no hallucination · pure skills, zero framework · eval loop · compounds with use</div>
+  <div class="cta"><span class="play">▶</span><span class="lbl">Zero key · 30-second trial</span><code>pip install pyyaml && python3 evals/evaluate.py</code></div>
+  <div class="stats">
+    <div class="stat"><b>11</b><span>Agent Skills</span></div>
+    <div class="stat g"><b>8</b><span>rule assertions · zero key</span></div>
+    <div class="stat a"><b>4</b><span>judge dimensions · calibrated</span></div>
+    <div class="stat"><b>3</b><span>quality gates</span></div>
+  </div>
+</div>
+</body>
+</html>

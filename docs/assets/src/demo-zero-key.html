@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1240px;height:640px;overflow:hidden}
+body{font-family:"PingFang SC","SF Pro Display",-apple-system,"Segoe UI",sans-serif;background:#0A0F1E;color:#E8EDF7;position:relative}
+.bg{position:absolute;inset:0;background:
+ radial-gradient(800px 460px at 10% -12%,rgba(99,102,241,.24),transparent 60%),
+ radial-gradient(760px 440px at 96% 8%,rgba(34,211,238,.14),transparent 60%),
+ radial-gradient(700px 460px at 50% 120%,rgba(52,211,153,.12),transparent 62%),
+ linear-gradient(158deg,#0B1122 0%,#0A0F1E 55%,#0C1424 100%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 80%)}
+.wrap{position:relative;padding:32px 40px;height:100%;display:flex;flex-direction:column}
+.head{display:flex;align-items:baseline;gap:14px;margin-bottom:16px}
+.eyebrow{font-size:12px;letter-spacing:.24em;color:#67E8F9;font-weight:700}
+h2{font-size:25px;font-weight:800;background:linear-gradient(92deg,#E0E7FF,#A5B4FC 55%,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+.head .badge{margin-left:auto;font-size:12.5px;color:#86EFAC;border:1px solid rgba(74,222,128,.4);background:rgba(52,211,153,.09);padding:5px 14px;border-radius:999px;font-weight:600}
+.term{flex:1;border:1px solid rgba(148,163,184,.22);border-radius:14px;background:#0C1220;box-shadow:0 22px 50px rgba(2,6,23,.55);display:flex;flex-direction:column;overflow:hidden}
+.bar{height:42px;flex:none;display:flex;align-items:center;gap:8px;padding:0 16px;background:rgba(148,163,184,.07);border-bottom:1px solid rgba(148,163,184,.14)}
+.lt{width:12px;height:12px;border-radius:50%}
+.r{background:#FF5F57}.y{background:#FEBC2E}.g{background:#28C840}
+.bar .title{margin-left:10px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;color:#8B96B0}
+.bar .tag{margin-left:auto;font-size:11px;color:#7C89A6;border:1px solid rgba(148,163,184,.25);padding:3px 10px;border-radius:999px}
+.body{flex:1;padding:20px 26px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13.5px;line-height:1.66;white-space:pre;overflow:hidden}
+.body div{height:22.4px}
+.p{color:#4ADE80;font-weight:700}
+.cmd{color:#E8EDF7;font-weight:700}
+.h{color:#A5B4FC;font-weight:700}
+.ok{color:#4ADE80}
+.okb{color:#4ADE80;font-weight:700}
+.cy{color:#67E8F9}
+.wa{color:#FBBF24}
+.dim{color:#7C89A6}
+.tx{color:#C7D2E4}
+.foot{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#86EFAC;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07);border-radius:11px;padding:10px 18px}
+.foot .sep{color:#3F4A63}
+.foot em{font-style:normal;color:#93A0B8}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grid"></div>
+<div class="wrap">
+  <div class="head"><span class="eyebrow">ZERO-KEY DEMO</span><h2>30 秒试用 · 真实运行输出</h2><span class="badge">无需任何 API key</span></div>
+  <div class="term">
+    <div class="bar"><span class="lt r"></span><span class="lt y"></span><span class="lt g"></span><span class="title">python3 evals/evaluate.py — QASkillKit</span><span class="tag">实测输出 · 非模拟</span></div>
+    <div class="body"><div><span class="p">$ </span><span class="cmd">python3 evals/evaluate.py</span></div><div></div><div><span class="h"># 评测基线报告 2026-11-12（offline+rules-only）</span></div><div></div><div><span class="dim">- 评测集版本：2；Judge：</span><span class="wa">跳过（无 key，不伪造分数）</span></div><div><span class="tx">- 判别力自测（负向对照）：</span><span class="ok">✅ 全部检出</span></div><div><span class="tx">- 变更点覆盖：</span><span class="cy">8/8</span></div><div></div><div><span class="h">## 用例级结果</span></div><div></div><div><span class="dim">| case | 类型 | 规则通道 | Judge | 结论 |</span></div><div><span class="dim">|:---|:---|:---|:---|:---|</span></div><div><span class="tx">| tc-1000001-good | positive | ✅ | — | </span><span class="ok">pass</span><span class="tx"> |</span></div><div><span class="tx">| tc-1000002-good | positive | ✅ | — | </span><span class="ok">pass</span><span class="tx"> |</span></div><div><span class="dim">报告已写入：evals/reports/baseline-2026-11-12.{md,json}</span></div><div><span class="okb">exit_ok=True</span></div></div>
+  </div>
+  <div class="foot">⚡ 秒级出结果<span class="sep">|</span>🔁 结果确定可复现<span class="sep">|</span><em>无 key 时 Judge 明确跳过、不编分数 —— 诚实是评测器的底线</em></div>
+</div>
+</body>
+</html>

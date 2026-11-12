@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/hero.png" alt="QASkillKit — QA 全流程 AI 技能工具箱" width="100%">
+</p>
+
 # QASkillKit — QA 全流程技能工具箱
 
 <p align="center">
@@ -31,39 +35,11 @@
 
 ## 🏗️ 架构设计
 
-```mermaid
-flowchart TB
-    Agent["🤖 AI Agent（IDE 内置）<br/>AGENTS.md 自动加载 → 强制读取配置与团队记忆库"]
+<!-- 图源：docs/assets/src/architecture.html，改文案后跑 bash docs/assets/src/render.sh architecture 重渲染 -->
 
-    subgraph Core["核心资产（三层沉淀）"]
-        S["📦 .qoder/skills<br/>技能包（10+）<br/>SKILL.md + 固化脚本"]
-        M["🧠 .qoder/team-memory<br/>团队记忆库<br/>01~06 主题文档"]
-        C["🔒 config/<br/>私有配置中心<br/>workspace_id / 数据库 / 知识库"]
-    end
-
-    subgraph MCP["MCP 工具链"]
-        T["mcp-server-tapd"]
-        D["dbx（数据库只读）"]
-        W["weknora-knowledge"]
-        B["browser-use"]
-    end
-
-    Agent --> S
-    Agent --> M
-    Agent --> C
-
-    Core --> T
-    Core --> D
-    Core --> W
-    Core --> B
-
-    classDef agent fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B
-    classDef core fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
-    classDef mcp fill:#F9FAFB,stroke:#9CA3AF,color:#374151
-    class Agent agent
-    class S,M,C core
-    class T,D,W,B mcp
-```
+<p align="center">
+  <img src="docs/assets/architecture.png" alt="架构：Agent 读取三层沉淀（Skills/团队记忆/私有配置），调用 MCP 工具链；右侧同一评测器把守三道质量门禁" width="100%">
+</p>
 
 三层沉淀，越用越聪明：
 
@@ -82,6 +58,10 @@ git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 pip install pyyaml
 python3 evals/evaluate.py
 ```
+
+<p align="center">
+  <img src="docs/assets/demo-zero-key.png" alt="零 key 试用真实终端输出：负向对照全部检出、变更点覆盖 8/8、两份好用例 pass" width="100%">
+</p>
 
 你会看到：仓库自带的 3 份用例，好的 2 份通过，故意写坏的 1 份被揪出全部问题（证明评测器不是橡皮图章），报告存到 `evals/reports/`。
 
@@ -126,6 +106,11 @@ git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 
 这个模块是"改作业的老师"：只改已经写好的测试用例，全程不碰 TAPD。三种情况：
 
+<!-- 图源：docs/assets/src/eval-gate.html，改文案后跑 bash docs/assets/src/render.sh eval-gate 重渲染 -->
+<p align="center">
+  <img src="docs/assets/eval-gate.png" alt="双通道评测流程：用例+需求原文进入规则通道与 LLM-as-Judge，负向对照自测判别力，exit 0/1 放行或拦截，报告与 badcase 回灌" width="100%">
+</p>
+
 ```bash
 pip install pyyaml
 python3 evals/evaluate.py               # ① 只想试试：改仓库自带的 3 份用例，零 key
@@ -161,6 +146,12 @@ python3 evals/evaluate.py --live
 - **tc-1000001-negative / coverage**（建议根因：prompt）：变更点③未被任何用例覆盖
 ……
 ```
+
+裁判打分明细长这样（真实基线，四维 1–5 分；故意写坏的负向对照被识破）：
+
+<p align="center">
+  <img src="docs/assets/demo-judge.png" alt="LLM-as-Judge 打分卡：两份好用例 4.8/5.0 通过，负向对照幻觉维 1 分被检出" width="100%">
+</p>
 
 ## 🔒 隐私与脱敏设计
 

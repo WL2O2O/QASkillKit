@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1240px;height:660px;overflow:hidden}
+body{font-family:"PingFang SC","SF Pro Display",-apple-system,"Segoe UI",sans-serif;background:#0A0F1E;color:#E8EDF7;position:relative}
+.bg{position:absolute;inset:0;background:
+ radial-gradient(800px 460px at 8% -12%,rgba(251,191,36,.12),transparent 60%),
+ radial-gradient(760px 440px at 96% 6%,rgba(99,102,241,.2),transparent 60%),
+ radial-gradient(700px 460px at 50% 120%,rgba(34,211,238,.12),transparent 62%),
+ linear-gradient(158deg,#0B1122 0%,#0A0F1E 55%,#0C1424 100%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 80%)}
+.wrap{position:relative;padding:30px 40px;height:100%;display:flex;flex-direction:column}
+.head{display:flex;align-items:baseline;gap:14px;margin-bottom:12px}
+.eyebrow{font-size:12px;letter-spacing:.24em;color:#FBBF24;font-weight:700}
+h2{font-size:25px;font-weight:800;background:linear-gradient(92deg,#E0E7FF,#A5B4FC 55%,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+.head .note{margin-left:auto;font-size:12.5px;color:#8B96B0}
+.meta{display:flex;gap:9px;margin-bottom:14px;flex-wrap:wrap}
+.m{font-size:11.5px;padding:4px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.25);color:#93A0B8;background:rgba(148,163,184,.07)}
+.m b{color:#DCE4F5;font-weight:600}
+.m.hl{color:#FCD34D;border-color:rgba(251,191,36,.38);background:rgba(251,191,36,.07)}
+.m.g{color:#86EFAC;border-color:rgba(74,222,128,.38);background:rgba(52,211,153,.07)}
+.panels{display:flex;gap:18px;flex:1;min-height:0}
+.panel{flex:1;border:1px solid rgba(148,163,184,.18);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));box-shadow:0 16px 36px rgba(2,6,23,.42);padding:18px 22px;display:flex;flex-direction:column}
+.panel .hd{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.panel .id{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:14px;color:#C7D2E4;font-weight:700}
+.panel .pass{margin-left:auto;font-size:11.5px;font-weight:800;color:#86EFAC;border:1px solid rgba(74,222,128,.45);background:rgba(52,211,153,.1);padding:4px 12px;border-radius:999px;letter-spacing:.08em}
+.panel .avg{font-size:30px;font-weight:800;background:linear-gradient(92deg,#4ADE80,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+.panel .avg small{font-size:13px;color:#7C89A6;-webkit-text-fill-color:#7C89A6;font-weight:600}
+.dim{margin-bottom:13px}
+.dim .lb{display:flex;align-items:baseline;gap:8px;margin-bottom:5px}
+.dim .lb b{font-size:13.5px;color:#DCE4F5}
+.dim .lb i{font-style:normal;font-size:10.5px;color:#7C89A6;letter-spacing:.04em}
+.dim .lb .sc{margin-left:auto;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;font-weight:800}
+.track{height:9px;border-radius:6px;background:rgba(148,163,184,.13);overflow:hidden}
+.fill{height:100%;border-radius:6px}
+.d1 .fill{background:linear-gradient(90deg,#6366F1,#818CF8)}.d1 .sc{color:#A5B4FC}
+.d2 .fill{background:linear-gradient(90deg,#0891B2,#22D3EE)}.d2 .sc{color:#67E8F9}
+.d3 .fill{background:linear-gradient(90deg,#059669,#4ADE80)}.d3 .sc{color:#86EFAC}
+.d4 .fill{background:linear-gradient(90deg,#D97706,#FBBF24)}.d4 .sc{color:#FCD34D}
+.panel .why{margin-top:auto;font-size:11.5px;color:#7C89A6;border-top:1px dashed rgba(148,163,184,.2);padding-top:10px;line-height:1.55}
+.neg{margin-top:14px;display:flex;align-items:center;gap:14px;border:1px solid rgba(248,113,113,.34);border-radius:13px;background:rgba(248,113,113,.05);padding:12px 20px}
+.neg .ic{font-size:19px}
+.neg .id{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12.5px;color:#FCA5A5;font-weight:700}
+.neg p{font-size:12px;color:#93A0B8;margin-top:2px}
+.neg .scores{display:flex;gap:7px;margin-left:auto}
+.neg .s{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;padding:4px 9px;border-radius:8px;border:1px solid rgba(148,163,184,.25);color:#93A0B8;background:rgba(10,15,30,.5)}
+.neg .s.bad{color:#F87171;border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.1);font-weight:800}
+.neg .det{font-size:12.5px;color:#4ADE80;font-weight:800;border:1px solid rgba(74,222,128,.45);background:rgba(52,211,153,.1);padding:6px 14px;border-radius:999px;white-space:nowrap}
+.foot{margin-top:12px;font-size:12px;color:#7C89A6;text-align:center}
+.foot b{color:#93A0B8}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grid"></div>
+<div class="wrap">
+  <div class="head"><span class="eyebrow">LLM-AS-JUDGE</span><h2>AI 裁判打分卡 · 真实基线</h2><span class="note">分数来自真实运行报告，非模拟</span></div>
+  <div class="meta">
+    <span class="m">裁判模型 <b>glm-4-flash</b></span>
+    <span class="m">模式 <b>offline+judge</b></span>
+    <span class="m">日期 <b>2026-11-12</b></span>
+    <span class="m g">人工复批 <b>8/8 一致</b></span>
+    <span class="m hl">阈值 <b>均分 ≥4 通过</b></span>
+  </div>
+  <div class="panels">
+    <div class="panel">
+      <div class="hd"><span class="id">tc-1000001-good</span><span class="pass">PASS</span><span class="avg">4.8<small> /5</small></span></div>
+      <div class="dim d1"><div class="lb"><b>覆盖度</b><i>coverage</i><span class="sc">4</span></div><div class="track"><div class="fill" style="width:80%"></div></div></div>
+      <div class="dim d2"><div class="lb"><b>相关性</b><i>relevance</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="dim d3"><div class="lb"><b>一致性</b><i>consistency</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="dim d4"><div class="lb"><b>无幻觉</b><i>hallucination</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="why">裁判原话：覆盖主要变更点，但缺少部分边界条件（第 5 次错误后的锁定逻辑等）——扣 1 分有理有据。</div>
+    </div>
+    <div class="panel">
+      <div class="hd"><span class="id">tc-1000002-good</span><span class="pass">PASS</span><span class="avg">5.0<small> /5</small></span></div>
+      <div class="dim d1"><div class="lb"><b>覆盖度</b><i>coverage</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="dim d2"><div class="lb"><b>相关性</b><i>relevance</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="dim d3"><div class="lb"><b>一致性</b><i>consistency</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="dim d4"><div class="lb"><b>无幻觉</b><i>hallucination</i><span class="sc">5</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+      <div class="why">裁判原话：覆盖所有变更点（新增分组 / 配置项 / 弹窗 / 保存校验 / 默认值 / 按钮防抖），粒度合理。</div>
+    </div>
+  </div>
+  <div class="neg">
+    <span class="ic">🎯</span>
+    <div><span class="id">tc-1000001-negative</span><p>故意写坏的负向对照：非法优先级 / 跳转引用 / 空预期 / 虚构凭证</p></div>
+    <div class="scores"><span class="s">覆盖 3</span><span class="s">相关 4</span><span class="s">一致 4</span><span class="s bad">幻觉 1</span></div>
+    <span class="det">✅ detected</span>
+  </div>
+  <div class="foot">裁判分有 <b>±1 抖动</b>，人工校准后才作参考；回归判定看规则通道与分数趋势，不因单次 ±1 判退步。</div>
+</div>
+</body>
+</html>

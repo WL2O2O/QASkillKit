@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1400px;height:840px;overflow:hidden}
+body{font-family:"PingFang SC","SF Pro Display",-apple-system,"Segoe UI",sans-serif;background:#0A0F1E;color:#E8EDF7;position:relative}
+.bg{position:absolute;inset:0;background:
+ radial-gradient(900px 520px at 8% -10%,rgba(99,102,241,.24),transparent 60%),
+ radial-gradient(820px 500px at 98% 6%,rgba(251,191,36,.10),transparent 60%),
+ radial-gradient(760px 520px at 50% 118%,rgba(34,211,238,.12),transparent 62%),
+ linear-gradient(158deg,#0B1122 0%,#0A0F1E 55%,#0C1424 100%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 50% 42%,#000 30%,transparent 78%)}
+.wrap{position:relative;padding:38px 52px;height:100%;display:flex;flex-direction:column}
+.head{display:flex;align-items:baseline;gap:16px;margin-bottom:20px}
+.eyebrow{font-size:12.5px;letter-spacing:.24em;color:#67E8F9;font-weight:700}
+h2{font-size:30px;font-weight:800;background:linear-gradient(92deg,#E0E7FF,#A5B4FC 55%,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+.head .note{margin-left:auto;font-size:13.5px;color:#8B96B0}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));border:1px solid rgba(148,163,184,.17);border-radius:16px;box-shadow:0 16px 36px rgba(2,6,23,.42)}
+.input{display:flex;align-items:center;gap:16px;padding:15px 24px}
+.input .tile{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(145deg,rgba(99,102,241,.35),rgba(34,211,238,.18));border:1px solid rgba(129,140,248,.4);flex:none}
+.input .pill{flex:1;display:flex;align-items:center;gap:12px;border:1px solid rgba(148,163,184,.2);border-radius:11px;padding:10px 16px;background:rgba(10,15,30,.5)}
+.input .pill b{font-size:15.5px}
+.input .pill span{font-size:12.5px;color:#7C89A6;margin-left:auto}
+.input .plus{color:#7C89A6;font-size:18px;font-weight:700}
+.fork{display:flex;gap:22px;padding:6px 0}
+.fork .f{flex:1;display:flex;flex-direction:column;align-items:center}
+.fork .line{width:2.5px;height:16px;border-radius:2px}
+.fork .tip{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;margin-top:-1px}
+.fork .lbl{font-size:12px;color:#7C89A6;margin-top:3px;letter-spacing:.06em}
+.f1 .line{background:linear-gradient(180deg,#6366F1,#22D3EE)}.f1 .tip{border-top:9px solid #22D3EE}
+.f2 .line{background:linear-gradient(180deg,#6366F1,#FBBF24)}.f2 .tip{border-top:9px solid #FBBF24}
+.channels{display:flex;gap:22px;flex:1;min-height:0}
+.ch{flex:1;padding:18px 22px;display:flex;flex-direction:column}
+.ch .hd{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ch .tile{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}
+.ch b{font-size:18px}
+.ch .en{display:block;font-size:10.5px;letter-spacing:.16em;font-weight:700;margin-top:2px}
+.rules{border-color:rgba(34,211,238,.38);box-shadow:0 0 28px rgba(34,211,238,.08),0 16px 36px rgba(2,6,23,.42)}
+.rules .tile{background:linear-gradient(145deg,rgba(34,211,238,.32),rgba(59,130,246,.16));border:1px solid rgba(34,211,238,.45)}
+.rules .en{color:#22D3EE}
+.judge{border-color:rgba(251,191,36,.36);box-shadow:0 0 28px rgba(251,191,36,.07),0 16px 36px rgba(2,6,23,.42)}
+.judge .tile{background:linear-gradient(145deg,rgba(251,191,36,.3),rgba(248,113,113,.15));border:1px solid rgba(251,191,36,.45)}
+.judge .en{color:#FBBF24}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;flex:1;align-content:start}
+.chip{border:1px solid rgba(34,211,238,.26);background:rgba(34,211,238,.06);border-radius:9px;padding:9px 6px;text-align:center;font-size:12.5px;color:#C7D2E4}
+.judge .chips{grid-template-columns:repeat(2,1fr)}
+.judge .chip{border-color:rgba(251,191,36,.28);background:rgba(251,191,36,.06);padding:10px 12px;text-align:left;display:flex;align-items:baseline;gap:8px}
+.judge .chip i{font-style:normal;font-size:10.5px;color:#7C89A6;letter-spacing:.04em}
+.badges{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.badge{font-size:11.5px;padding:4px 11px;border-radius:999px;border:1px solid rgba(148,163,184,.25);color:#93A0B8;background:rgba(148,163,184,.07)}
+.rules .badge{color:#67E8F9;border-color:rgba(34,211,238,.35);background:rgba(34,211,238,.07)}
+.judge .badge{color:#FCD34D;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.07)}
+.merge{display:flex;flex-direction:column;align-items:center;padding:5px 0}
+.merge .line{width:2.5px;height:14px;background:linear-gradient(180deg,#22D3EE,#4ADE80);border-radius:2px}
+.merge .tip{width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-top:9px solid #4ADE80;margin-top:-1px}
+.disc{display:flex;align-items:center;gap:14px;padding:12px 22px;border-color:rgba(248,113,113,.32)}
+.disc .tile{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;background:linear-gradient(145deg,rgba(248,113,113,.28),rgba(251,191,36,.14));border:1px solid rgba(248,113,113,.4);flex:none}
+.disc b{font-size:15px}
+.disc p{font-size:13px;color:#93A0B8;margin-top:2px}
+.disc .ok{margin-left:auto;font-size:13.5px;color:#4ADE80;font-weight:700;border:1px solid rgba(74,222,128,.4);background:rgba(52,211,153,.09);padding:7px 16px;border-radius:999px;white-space:nowrap}
+.outs{display:flex;gap:16px;margin-top:14px}
+.out{flex:1;padding:13px 18px;display:flex;align-items:center;gap:12px}
+.out .ic{font-size:20px;flex:none}
+.out b{font-size:14.5px;display:block}
+.out span{font-size:12px;color:#8B96B0;display:block;margin-top:2px}
+.o1{border-color:rgba(74,222,128,.35)}.o1 b{color:#86EFAC}
+.o2{border-color:rgba(248,113,113,.35)}.o2 b{color:#FCA5A5}
+.o3{border-color:rgba(129,140,248,.38)}.o3 b{color:#A5B4FC}
+.gates{margin-top:16px;display:flex;align-items:center;gap:12px;border:1px solid rgba(148,163,184,.2);border-radius:12px;padding:11px 18px;background:rgba(10,15,30,.55)}
+.gates .t{font-size:12px;letter-spacing:.18em;color:#7C89A6;font-weight:700;flex:none}
+.g{flex:1;display:flex;align-items:center;gap:9px;font-size:12.5px;color:#C7D2E4}
+.g .n{width:21px;height:21px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:800;color:#0A0F1E;flex:none}
+.g1 .n{background:#4ADE80}.g2 .n{background:#22D3EE}.g3 .n{background:#FBBF24}
+.g small{color:#7C89A6;font-size:11px;display:block}
+.gates .sep{color:#3F4A63}
+.gates code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px;color:#A5B4FC;flex:none}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grid"></div>
+<div class="wrap">
+  <div class="head"><span class="eyebrow">EVALUATION</span><h2>双通道评测 · 一个入口，三道关</h2><span class="note">零 key 可跑 · 裁判分校准后才作数</span></div>
+  <div class="card input">
+    <div class="tile">📥</div>
+    <div class="pill"><b>测试用例 MD</b><span>被测输出 · 9 列用例表</span></div>
+    <span class="plus">＋</span>
+    <div class="pill"><b>需求原文 fixture</b><span>对照基准 · 变更点清单</span></div>
+  </div>
+  <div class="fork">
+    <div class="f f1"><div class="line"></div><div class="tip"></div><div class="lbl">结构合规？</div></div>
+    <div class="f f2"><div class="line"></div><div class="tip"></div><div class="lbl">语义质量？</div></div>
+  </div>
+  <div class="channels">
+    <div class="card ch rules">
+      <div class="hd"><div class="tile">⚖️</div><div><b>规则通道 · 8 项断言</b><span class="en">RULES · DETERMINISTIC</span></div></div>
+      <div class="chips">
+        <div class="chip">9 列格式</div><div class="chip">P0/P1/P2</div><div class="chip">变更点标注</div><div class="chip">变更点覆盖</div>
+        <div class="chip">禁跳转引用</div><div class="chip">预期非空</div><div class="chip">无虚构凭证</div><div class="chip">变更点章节</div>
+      </div>
+      <div class="badges"><span class="badge">零 key</span><span class="badge">秒级</span><span class="badge">结果确定可复现</span><span class="badge">钩子 / CI 强制</span></div>
+    </div>
+    <div class="card ch judge">
+      <div class="hd"><div class="tile">🧑‍⚖️</div><div><b>LLM-as-Judge · 4 维打分</b><span class="en">SEMANTIC · KEY-GATED</span></div></div>
+      <div class="chips">
+        <div class="chip">覆盖度 <i>coverage</i></div><div class="chip">相关性 <i>relevance</i></div>
+        <div class="chip">一致性 <i>consistency</i></div><div class="chip">无幻觉 <i>hallucination</i></div>
+      </div>
+      <div class="badges"><span class="badge">需 key · 无 key 明确跳过</span><span class="badge">1–5 分 · 均分 ≥4 过</span><span class="badge">人工校准 8/8 一致</span></div>
+    </div>
+  </div>
+  <div class="merge"><div class="line"></div><div class="tip"></div></div>
+  <div class="card disc">
+    <div class="tile">🎯</div>
+    <div><b>判别力自测 · 负向对照</b><p>故意写坏的样本（非法优先级 / 跳转引用 / 空预期 / 虚构凭证…）必须被检出，评测器不是摆设</p></div>
+    <span class="ok">✅ 全部检出</span>
+  </div>
+  <div class="outs">
+    <div class="card out o1"><span class="ic">✅</span><div><b>exit 0 · 放行</b><span>提交 / CI 通过</span></div></div>
+    <div class="card out o2"><span class="ic">❌</span><div><b>exit 1 · 拦截</b><span>只列挡路条目：哪份 / 哪行 / 哪条规则</span></div></div>
+    <div class="card out o3"><span class="ic">📊</span><div><b>报告 + bad case 回灌</b><span>baseline-*.md/json · 根因建议 → 修 prompt</span></div></div>
+  </div>
+  <div class="gates">
+    <span class="t">三道关</span>
+    <div class="g g1"><span class="n">1</span><div>pre-commit 钩子<small>本地提交时</small></div></div><span class="sep">→</span>
+    <div class="g g2"><span class="n">2</span><div>GitHub Actions CI<small>push / PR · 零 key</small></div></div><span class="sep">→</span>
+    <div class="g g3"><span class="n">3</span><div>LLM-as-Judge<small>本地带 key · 校准后</small></div></div>
+    <code>python3 evals/evaluate.py</code>
+  </div>
+</div>
+</body>
+</html>

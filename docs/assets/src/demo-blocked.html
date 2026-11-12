@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1240px;height:540px;overflow:hidden}
+body{font-family:"PingFang SC","SF Pro Display",-apple-system,"Segoe UI",sans-serif;background:#0A0F1E;color:#E8EDF7;position:relative}
+.bg{position:absolute;inset:0;background:
+ radial-gradient(800px 460px at 8% -12%,rgba(248,113,113,.13),transparent 60%),
+ radial-gradient(760px 440px at 96% 10%,rgba(99,102,241,.18),transparent 60%),
+ radial-gradient(700px 460px at 50% 120%,rgba(52,211,153,.13),transparent 62%),
+ linear-gradient(158deg,#0B1122 0%,#0A0F1E 55%,#0C1424 100%)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(148,163,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 80%)}
+.wrap{position:relative;padding:30px 40px;height:100%;display:flex;flex-direction:column}
+.head{display:flex;align-items:baseline;gap:14px;margin-bottom:16px}
+.eyebrow{font-size:12px;letter-spacing:.24em;color:#67E8F9;font-weight:700}
+h2{font-size:25px;font-weight:800;background:linear-gradient(92deg,#E0E7FF,#A5B4FC 55%,#22D3EE);-webkit-background-clip:text;background-clip:text;color:transparent}
+.head .note{margin-left:auto;font-size:12.5px;color:#8B96B0}
+.term{border:1px solid rgba(148,163,184,.22);border-radius:14px;background:#0C1220;box-shadow:0 18px 42px rgba(2,6,23,.5);overflow:hidden}
+.term.bad{border-color:rgba(248,113,113,.4);box-shadow:0 0 26px rgba(248,113,113,.07),0 18px 42px rgba(2,6,23,.5)}
+.term.good{border-color:rgba(74,222,128,.38);box-shadow:0 0 26px rgba(52,211,153,.07),0 18px 42px rgba(2,6,23,.5)}
+.bar{height:38px;display:flex;align-items:center;gap:8px;padding:0 16px;background:rgba(148,163,184,.07);border-bottom:1px solid rgba(148,163,184,.14)}
+.lt{width:11px;height:11px;border-radius:50%}
+.r{background:#FF5F57}.y{background:#FEBC2E}.g{background:#28C840}
+.bar .title{margin-left:10px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:12px;color:#8B96B0}
+.bar .tag{margin-left:auto;font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700}
+.bad .tag{color:#FCA5A5;border:1px solid rgba(248,113,113,.4);background:rgba(248,113,113,.08)}
+.good .tag{color:#86EFAC;border:1px solid rgba(74,222,128,.4);background:rgba(52,211,153,.08)}
+.body{padding:14px 24px;font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:13px;line-height:1.7;white-space:pre}
+.body div{height:22.1px}
+.p{color:#4ADE80;font-weight:700}
+.cmd{color:#E8EDF7;font-weight:700}
+.err{color:#F87171;font-weight:700}
+.vio{color:#FBBF24}
+.ok{color:#4ADE80;font-weight:700}
+.dim{color:#7C89A6}
+.tx{color:#C7D2E4}
+.fix{display:flex;align-items:center;justify-content:center;gap:12px;padding:9px 0}
+.fix .line{width:2.5px;height:12px;background:linear-gradient(180deg,#F87171,#4ADE80);border-radius:2px}
+.fix .chip{display:inline-flex;align-items:center;gap:10px;font-size:12.5px;color:#DCE4F5;border:1px solid rgba(148,163,184,.28);background:rgba(10,15,30,.6);padding:7px 16px;border-radius:999px}
+.fix .chip b{color:#FBBF24}
+.fix .chip .to{color:#4ADE80;font-weight:800}
+.fix .chip code{font-family:"SF Mono",ui-monospace,Menlo,monospace;font-size:11.5px;color:#A5B4FC}
+.foot{margin-top:14px;display:flex;align-items:center;gap:10px;font-size:13px;color:#86EFAC;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.07);border-radius:11px;padding:10px 18px}
+.foot .sep{color:#3F4A63}
+.foot em{font-style:normal;color:#93A0B8}
+</style>
+</head>
+<body>
+<div class="bg"></div><div class="grid"></div>
+<div class="wrap">
+  <div class="head"><span class="eyebrow">LOCAL GATE</span><h2>pre-commit 实测：坏用例被挡在提交之前</h2><span class="note">真实拦截 → 真实修复 → 真实通过</span></div>
+  <div class="term bad">
+    <div class="bar"><span class="lt r"></span><span class="lt y"></span><span class="lt g"></span><span class="title">git commit · 第一次尝试</span><span class="tag">❌ 被挡住</span></div>
+    <div class="body"><div><span class="p">$ </span><span class="cmd">git commit</span></div><div><span class="err">❌ pre-commit 评测未通过，本次提交被挡住：</span></div><div><span class="vio">- 全仓扫描 workspace/testcases/sprint100/demo1.md / priority_valid：行1 优先级'P10'非法</span></div><div><span class="dim">完整报告可跑：python3 evals/evaluate.py（加 --scan 看全仓扫描）</span></div></div>
+  </div>
+  <div class="fix"><div class="line"></div><span class="chip">🔧 修复：<b>P10</b><span class="to">→</span>P0 · 真实提交 <code>3f22726</code></span><div class="line"></div></div>
+  <div class="term good">
+    <div class="bar"><span class="lt r"></span><span class="lt y"></span><span class="lt g"></span><span class="title">git commit · 修复后再试</span><span class="tag">✅ 放行</span></div>
+    <div class="body"><div><span class="p">$ </span><span class="cmd">git commit</span></div><div><span class="ok">✅ pre-commit 评测通过（登记评测 + 全仓结构扫描）</span></div><div><span class="tx">[main 3f22726] fix: restore valid P0 priority in sprint100 demo case</span></div><div><span class="dim"> 1 file changed, 1 insertion(+), 1 deletion(-)</span></div></div>
+  </div>
+  <div class="foot">🛡️ 只列挡路条目：哪份用例 · 哪一行 · 犯哪条规则<span class="sep">|</span><em>不刷整份报告，完整报告手动跑命令看</em></div>
+</div>
+</body>
+</html>

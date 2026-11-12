@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/hero-en.png" alt="QASkillKit — the QA workflow AI skill toolkit" width="100%">
+</p>
+
 # QASkillKit — QA All-in-One Agent Skill Kit
 
 <p align="center">
@@ -84,6 +88,11 @@ test 1019311             ← Run UI automation for that requirement
 
 Clone and run without any TAPD project — experience the core methodology: **QA for AI itself**.
 
+<!-- Source: docs/assets/src/eval-gate-en.html; re-render with bash docs/assets/src/render.sh eval-gate-en -->
+<p align="center">
+  <img src="docs/assets/eval-gate-en.png" alt="Dual-channel evaluation flow: cases plus requirement fixture enter the rule channel and LLM-as-Judge; negative controls prove discrimination; exit 0/1 passes or blocks; reports and bad cases feed back" width="100%">
+</p>
+
 ```bash
 pip install pyyaml
 python3 evals/evaluate.py        # zero keys: rule channel + bundled desensitized outputs, baseline report
@@ -114,41 +123,18 @@ python3 evals/evaluate.py --add path/to/cases.md --fixture path/to/requirement.m
 - **tc-1000001-negative / coverage**：变更点③未被任何用例覆盖
 ```
 
+The judge's per-dimension scorecard (real baseline; the deliberately broken negative control gets caught):
+
+<p align="center">
+  <img src="docs/assets/demo-judge-en.png" alt="LLM-as-Judge scorecard: two good cases pass at 4.8/5.0; the negative control scores 1 on hallucination and is detected" width="100%">
+</p>
+
 ## 🏗️ Architecture
 
-```mermaid
-flowchart TB
-    Agent["🤖 AI Agent (IDE built-in)<br/>AGENTS.md auto-loaded → enforces config + team-memory"]
-
-    subgraph Core["Core Assets (Three Layers)"]
-        S["📦 .qoder/skills<br/>Skill pack (10+)<br/>SKILL.md + scripts"]
-        M["🧠 .qoder/team-memory<br/>Team memory<br/>01~06 topic docs"]
-        C["🔒 config/<br/>Private config hub<br/>workspace_id / DB / knowledge bases"]
-    end
-
-    subgraph MCP["MCP Toolchain"]
-        T["mcp-server-tapd"]
-        D["dbx (read-only DB)"]
-        W["weknora-knowledge"]
-        B["browser-use"]
-    end
-
-    Agent --> S
-    Agent --> M
-    Agent --> C
-
-    Core --> T
-    Core --> D
-    Core --> W
-    Core --> B
-
-    classDef agent fill:#EEF2FF,stroke:#6366F1,color:#1E1B4B
-    classDef core fill:#EFF6FF,stroke:#3B82F6,color:#1E3A8A
-    classDef mcp fill:#F9FAFB,stroke:#9CA3AF,color:#374151
-    class Agent agent
-    class S,M,C core
-    class T,D,W,B mcp
-```
+<!-- Source: docs/assets/src/architecture-en.html; re-render with bash docs/assets/src/render.sh architecture-en -->
+<p align="center">
+  <img src="docs/assets/architecture-en.png" alt="Architecture: the agent reads three compounding layers (skills, team memory, private config) and calls the MCP toolchain; one evaluator guards three quality gates" width="100%">
+</p>
 
 Three layers that compound in value:
 
