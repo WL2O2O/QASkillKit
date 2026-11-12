@@ -17,7 +17,7 @@
 ## 情况 1：零 key 试用（改仓库自带的作业）
 
 ```bash
-pip install pyyaml          # 唯一依赖
+pip install pyyaml          # 唯一运行依赖（跑评测器自测另需 pytest，见「评测器自测」节）
 python3 evals/evaluate.py
 ```
 
@@ -108,11 +108,24 @@ AI 裁判第一次真实打分，抓出的竟是**裁判自己的问题**——�
   <img src="../docs/assets/demo-judge.png" alt="LLM-as-Judge 打分卡：两份好用例 4.8/5.0 通过，负向对照幻觉维 1 分被检出" width="100%">
 </p>
 
+## 评测器自测（pytest）：评测器也要被评测
+
+老师改作业，谁来改老师？除了负向对照（判别力自测）和人工校准，评测器还有一套单元测试锁住自己的行为：
+
+```bash
+pip install -r requirements.txt    # 运行依赖 pyyaml + 自测依赖 pytest
+python3 -m pytest evals/tests -q   # 58 条用例，零 key，1 秒内跑完
+```
+
+- **测什么**：8 条规则的触发/不触发边界（含 `admin\d{3,}`、内网 IP 段 172.16–31、四种跳转引用写法等正则边界）、用例表解析（表头识别/分隔行/空行终止/多表合并）、扫描逻辑（无表 MD 跳过、只报 6 项结构规则、fixtures 不在默认扫描根）、评测集完整性（cases/badcases/calibration 三个 YAML 的字段与枚举校验、引用文件存在性）、判别力保证（负向对照必须检出全部登记违规、正样本必须零违规——与退出码语义一致，评测集或规则被改坏会直接红）。
+- **不测什么**：Judge 真实网络调用与 `--live`（需 key，属运行期行为，由上面的校准实录兜底）。这是刻意边界：单测只锁确定性逻辑，不引入外部依赖。
+- CI 每次 push/PR 会先跑这套自测再跑登记评测与扫描（`.github/workflows/evals.yml`）；pre-commit 钩子保持两层不跑 pytest（避免强制装依赖，秒级优先）。
+
 ## 报告在哪、怎么看
 
 - `evals/reports/baseline-日期.md`：给人看的报告；
 - 同名 `.json`：给机器看的，两次运行对比差异就是回归报告；
-- 命令退出码 0 = 全过，1 = 有失败。仓库已挂好 CI（`.github/workflows/evals.yml`）：每次 push/PR 自动跑登记评测 + 全仓扫描两层（零 key），失败亮红叉（配合分支保护可挡合并），README 顶部有徽章。Judge 通道不在 CI 跑（不在 CI 存 key），本地 export key 即可启用。
+- 命令退出码 0 = 全过，1 = 有失败。仓库已挂好 CI（`.github/workflows/evals.yml`）：每次 push/PR 自动跑评测器 pytest 自测 + 登记评测 + 全仓扫描三层（零 key），失败亮红叉（配合分支保护可挡合并），README 顶部有徽章。Judge 通道不在 CI 跑（不在 CI 存 key），本地 export key 即可启用。
 
 ## 全仓结构扫描（--scan）
 
@@ -125,7 +138,7 @@ python3 evals/evaluate.py --scan
 - 扫描根：`workspace/testcases/`、`examples/`、`demo/`（项目约定的用例存放目录），递归扫所有含用例表的 MD；用例放在别处？`--scan-root 目录路径` 指定（可多次）；
 - 查 6 项不需要需求原文的结构规则：9 列格式、P0/P1/P2、关联引用非空、无跳转引用、预期结果非空、无虚构凭证；
 - 覆盖度与变更点说明依赖需求原文，留给登记评测；`evals/fixtures/` 里故意写坏的负向对照不扫；
-- 钩子和 CI 都跑"登记评测 + 扫描"两层：结构问题全仓拦，内容质量登记评。
+- 钩子跑"登记评测 + 扫描"两层，CI 在这之上还跑评测器 pytest 自测（见「评测器自测」节）：结构问题全仓拦，内容质量登记评，评测器自身坏了 CI 拦。
 
 ## 本地提交门禁（pre-commit 钩子，可选）
 

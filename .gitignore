@@ -37,4 +37,5 @@ node_modules/
 # Python 缓存（任意层级）
 __pycache__/
 *.pyc
+.pytest_cache/
 .DS_Store

@@ -1,4 +1,4 @@
-# 评测回归门禁：每次 push / PR 自动跑规则通道（零 key，不依赖任何外部服务）。
+# 评测回归门禁：每次 push / PR 自动跑 评测器 pytest 自测 + 登记评测 + 全仓结构扫描（零 key，不依赖任何外部服务）。
 # 退出码 0 = 正样本全过且负向对照全部检出；非 0 亮红叉（配合 branch protection 可挡合并）。
 # Judge 通道不在 CI 跑（不在 CI 存 key）；本地 export key 即可启用，见 evals/README.md。
 name: evals
@@ -16,8 +16,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install dependency
-        run: pip install pyyaml
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Evaluator self-tests (pytest, no key)
+        run: python3 -m pytest evals/tests -q
       - name: Run evaluator (rule channel, no key)
         run: python3 evals/evaluate.py
       - name: Whole-repo structural scan (no key)

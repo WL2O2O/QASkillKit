@@ -30,7 +30,7 @@
 | 📅 周报生成 | `weekly-report` | `/zb` | `写周报` | 从 TAPD 拉取本周需求/缺陷动态，按指南生成结构化周报 |
 | 🖼️ 三轨 OCR 识图 | `ocr` | — | 被其他 skill 自动调用 | Windows OCR（覆盖率）+ OpenOCR（精读）+ VLM（结构）三通道交叉验证 |
 | ⚙️ 初始化向导 | `setup` | `/setup` | 首次使用运行 | 自动探测 TAPD 项目/数据库连接/知识库，生成私有配置 |
-| 🧪 Agent 评测 | `evals/` 模块 | — | `python3 evals/evaluate.py` | YAML 评测集 + 规则断言/LLM-as-Judge 双通道；零 key 可跑、无需 TAPD，负向对照自测 |
+| 🧪 Agent 评测 | `evals/` 模块 | — | `python3 evals/evaluate.py` | YAML 评测集 + 规则断言/LLM-as-Judge 双通道；零 key 可跑、无需 TAPD，负向对照自测；评测器自身另有 pytest 自测 |
 | 🧪 用例评测 | `testcase-evaluator` | `/eval` | `评测一下这份用例` / `跑评测` | evals 模块的对话入口：自动选登记评测/全仓扫描/--live，人话解读违规，badcase 根因与校准待人工确认 |
 
 ## 🏗️ 架构设计
@@ -119,6 +119,8 @@ python3 evals/evaluate.py --live
 ```
 
 ③ 团队有 TAPD：真实 skill 生成用例后，喂进来用同一套标准改。**有自己的需求文字？** 一条命令登记：`python3 evals/evaluate.py --add 你的用例.md --fixture 你的需求.md --points ①②`，免手写 YAML。三种情况的逐步教程见 [evals/README.md](evals/README.md)。
+
+评测器自己也要被评测：自带 pytest 自测锁住规则边界、表格解析、扫描逻辑与判别力保证（`pip install -r requirements.txt && python3 -m pytest evals/tests -q`，零 key 秒级），CI 同样跑。
 
 **报告长什么样**（真实基线节选：好的 2 份通过，故意写坏的 1 份被全部检出；完整版在 `evals/reports/`）：
 

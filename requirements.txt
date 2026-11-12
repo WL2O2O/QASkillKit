@@ -1,0 +1,5 @@
+# QASkillKit 依赖清单
+# 评测器运行（Track A 零 key 评测只需第一条）：
+pyyaml>=6.0
+# 评测器自测（python3 -m pytest evals/tests -q，CI 同步跑）：
+pytest>=7.0
