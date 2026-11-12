@@ -31,7 +31,23 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+Pick a track: **just trying it out → Track A** (30 seconds, Python only); **your team uses TAPD and wants the full workflow → Track B**.
+
+### Track A: Evaluate test cases in 30 seconds (no TAPD, no key, no IDE)
+
+```bash
+git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
+pip install pyyaml
+python3 evals/evaluate.py
+```
+
+You'll see: of the 3 bundled case files, the 2 good ones pass and the intentionally bad one has every violation flagged (the evaluator is no rubber stamp). Reports land in `evals/reports/`.
+
+Want the AI to write cases on the fly and grade them? `export GLM_API_KEY=your_key`, then run `python3 evals/evaluate.py --live`. To feed in your own requirements or case files, follow the step-by-step guide in [evals/README.md](evals/README.md).
+
+### Track B: Full QA workflow (TAPD teams)
+
+Prerequisites:
 
 | Dependency | Purpose | Required |
 |:---|:---|:---:|
@@ -42,7 +58,7 @@
 | MCP: `weknora-knowledge` | Business knowledge base | Optional |
 | Python 3 + Node.js ≥ 18 | Utility scripts / OCR | ✅ Required |
 
-### Get Started
+Get started in 3 steps:
 
 ```bash
 # 1. Clone
@@ -61,6 +77,7 @@ After `/setup` generates `config/project.config.json` (gitignored), you're ready
 test 1019311             ← Run UI automation for that requirement
 /ys generate s92 report ← Generate acceptance report
 /zb                     ← Generate this week's report
+/eval                   ← Evaluate case quality (no TAPD, zero keys needed)
 ```
 
 ## 🧪 Agent Evaluation (public entry, no TAPD needed)

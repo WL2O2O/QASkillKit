@@ -73,7 +73,23 @@ flowchart TB
 
 ## 🚀 快速开始
 
-### 前置要求
+按你的情况选一条轨道：**只想试试 → 轨道 A**（30 秒，只要 Python）；**团队用 TAPD、要完整流程 → 轨道 B**。
+
+### 轨道 A：30 秒试用例评测（无 TAPD、无 key、无 IDE）
+
+```bash
+git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
+pip install pyyaml
+python3 evals/evaluate.py
+```
+
+你会看到：仓库自带的 3 份用例，好的 2 份通过，故意写坏的 1 份被揪出全部问题（证明评测器不是橡皮图章），报告存到 `evals/reports/`。
+
+想让 AI 当场写、当场评？`export GLM_API_KEY=你的key` 后跑 `python3 evals/evaluate.py --live`。想喂自己的需求/用例，逐步教程见 [evals/README.md](evals/README.md)。
+
+### 轨道 B：完整 QA 工作流（TAPD 团队）
+
+前置要求：
 
 | 依赖 | 用途 | 必需性 |
 |:---|:---|:---|
@@ -84,7 +100,7 @@ flowchart TB
 | MCP: `weknora-knowledge` | 业务知识库补充 | 可选 |
 | Python 3 + Node.js ≥ 18 | 固化脚本/OCR/下载脚本 | ✅ 必需 |
 
-### 三步跑起来
+三步跑起来：
 
 ```bash
 # 1. 克隆仓库
@@ -103,6 +119,7 @@ git clone https://github.com/WL2O2O/QASkillKit.git && cd QASkillKit
 测试 1019311             ← UI 自动化执行该需求的用例
 /ys 生成 s92 验收报告     ← 生成迭代验收报告
 /zb                     ← 生成本周周报
+/eval                   ← 评测用例质量（无需 TAPD，零 key 可跑）
 ```
 
 ## 🧪 Agent 评测（公开入口，无需 TAPD）
