@@ -6,6 +6,7 @@ description: >
   按验收报告模板（依据历史验收报告提炼）生成结构化验收报告。
   使用场景：需要生成迭代验收报告时，或用户提到 "验收报告"、"验收"、"生成验收"、
   "s{版本号}验收" 或直接提供迭代计划与发布计划时。
+  English: sprint acceptance reports from TAPD (alias /ys; requires mcp-server-tapd).
 ---
 
 # 迭代验收报告生成 Skill

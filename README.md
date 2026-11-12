@@ -196,7 +196,7 @@ python3 evals/evaluate.py --live
 - **真实数据，禁止虚构**：测试数据必须来自数据库真实查询或需求原文，从源头杜绝 AI 幻觉用例
 - **人机协作边界清晰**：AI 禁止写库、禁止执行推送/支付等高危操作，SQL 只输出给人执行
 - **经验复利**：每次执行的坑点按端/按主题回灌到 team-memory 与 references，团队越用越强
-- **跨 IDE 兼容**：基于通用 AGENTS.md 规范，Qoder / Claude Code 等均可加载
+- **跨 IDE 兼容**：基于通用 AGENTS.md 规范，Qoder / Claude Code 等均可加载；仓库自带 `.claude/skills → .qoder/skills` 软链，Claude Code 克隆即用（Windows 若软链不生效，管理员终端执行 `mklink /D .claude\skills ..\.qoder\skills`）
 
 ## 🤝 贡献与二次开发
 

@@ -4,6 +4,7 @@ description: >
   基于 MCP 工具链（mcp-server-tapd）的周报生成 Skill，简写为 /zb。
   通过 TAPD 获取迭代信息、需求列表和缺陷列表，按AI周报编写指南生成结构化周报。
   使用场景：需要生成周报时，或用户提到 "写周报"、"周报"、"生成周报" 时。
+  English: weekly reports from TAPD requirement/defect updates (alias /zb; requires mcp-server-tapd).
 ---
 
 # 周报生成 Skill

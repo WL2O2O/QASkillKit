@@ -7,6 +7,7 @@ description: >
   文件名保留【】括号、多缺陷按生成时间正序追加到文件末尾等规则。
   使用场景：需要生成缺陷报告时，或用户提到 "缺陷报告"、"写缺陷"、"生成缺陷"、
   "缺陷文档" 或直接描述缺陷现象要求记录时。
+  English: standardized defect reports following the team's defect template (triggers: "write a defect report" or describing a bug).
 ---
 
 # 缺陷报告生成 Skill

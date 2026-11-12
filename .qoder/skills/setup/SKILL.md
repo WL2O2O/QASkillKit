@@ -8,6 +8,7 @@ description: >
   优先自动探测，探测不到才询问用户。
   使用场景：用户运行 /setup、提到 "初始化"、"配置向导"、"首次使用"，
   或其他 skill 发现 config/project.config.json 不存在时引导至此。
+  English: first-run setup wizard (alias /setup) — detects TAPD/DB/knowledge bases and generates private config.
 ---
 
 # 项目初始化配置向导（/setup）

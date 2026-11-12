@@ -4,6 +4,7 @@ description: >
   三轨协同识图架构：Windows OCR（覆盖率通道）+ OpenOCR（精读排序通道）+ VLM/Read（结构通道）。
   通过三通道交叉验证，解决单一 OCR 引擎的覆盖率、排序、结构理解三大痛点。
   使用场景：TAPD 需求图片、规格说明图、原型截图、流程图等所有需要从图片中提取文字和结构信息的场景。
+  English: three-channel cross-validated OCR (Windows OCR + OpenOCR + VLM) for requirement images, prototypes and flowcharts.
 ---
 
 # Image OCR - 三轨协同识图（Windows OCR + OpenOCR + VLM/Read）

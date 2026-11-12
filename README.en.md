@@ -162,7 +162,7 @@ Three layers that compound in value:
 - **Real data only** — test data must come from real DB queries or requirement originals; no AI-hallucinated cases
 - **Human-AI boundary** — AI must not write to DB, execute payments, or other destructive operations; SQL is output-only for human execution
 - **Compounding experience** — pitfalls from each run are fed back into team-memory and references
-- **Cross-IDE compatible** — based on the standard AGENTS.md convention; works with Qoder, Claude Code, and more
+- **Cross-IDE compatible** — based on the standard AGENTS.md convention; works with Qoder, Claude Code, and more. A committed `.claude/skills → .qoder/skills` symlink makes Claude Code work out of the box (Windows: if the symlink doesn't resolve, run `mklink /D .claude\skills ..\.qoder\skills` in an admin terminal)
 
 ## 🔒 Privacy & Confidentiality
 

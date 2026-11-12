@@ -6,6 +6,7 @@ description: >
   TAPD 描述原文）的差异直接双路径修正，依据不足或歧义项输出待确认报告，用户确认后修正。
   使用场景：用户提供 TAPD 需求 ID（纯数字）要求"核查/核对/review/检查"测试用例，或提到
   "用例与原型比对"、"用例审核"、"检查用例对不对"时。
+  English: review existing test cases against TAPD requirement prototypes and fix confirmed mismatches (triggers: "review/verify cases" + a TAPD story ID).
 ---
 
 # TAPD 需求测试用例核查（Review）

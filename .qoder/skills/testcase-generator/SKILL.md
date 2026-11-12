@@ -5,6 +5,7 @@ description: >
   通过 TAPD 获取需求信息、数据库查询真实测试数据、知识库补充业务细节，生成结构化测试用例。
   使用场景：需要为 TAPD 需求编写测试用例时，或用户提到 "生成测试用例"、"写用例"、"测试用例设计"、
   或直接输入 TAPD 需求 ID 数字（如 1019311）时。
+  English: AI test-case design from TAPD requirements + real DB data + prototype OCR (requires the MCP toolchain; triggers: a TAPD story ID, "generate test cases").
 ---
 
 # AI测试用例设计（MCP版）

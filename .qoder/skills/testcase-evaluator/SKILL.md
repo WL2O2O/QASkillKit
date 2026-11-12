@@ -1,67 +1,88 @@
 ---
 name: testcase-evaluator
 description: >
-  测试用例评测 Skill（简写 /eval）。evals/ 双通道评测器的对话入口：登记评测（8 项规则断言 +
-  LLM-as-Judge 四维打分）、全仓结构扫描（--scan）、有 key 时可现场生成再评（--live）；
+  Test-case quality evaluation skill (alias /eval). Conversational entry to the evals/
+  dual-channel evaluator: registered evals (8 rule assertions + LLM-as-Judge 4-dimension
+  scoring), repo-wide structural scan (--scan), custom scan roots (--scan-root),
+  one-command case registration (--add), and on-the-fly generation with a key (--live).
+  Explains violations in plain language; badcase root causes and calibration records
+  stay draft-only until a human confirms. Runs with zero keys, no TAPD needed.
+  测试用例评测 Skill（简写 /eval）：登记评测、全仓结构扫描、--add 一键登记、有 key 时现场生成再评；
   违规解读成人话，badcase 根因与校准记录出草稿待人工确认。零 key 可跑、不依赖 TAPD。
-  使用场景：用户提到"评测/跑评测/给用例打分/eval"，或给出用例文件路径要求质量检查，
-  或输入 /eval 时。
+  Use when the user says "评测/跑评测/给用例打分/eval", "evaluate/run evals/grade this
+  case file", gives a case-file path for a quality check, or types /eval.
 ---
 
-# 测试用例评测（testcase-evaluator）
+# Test-Case Evaluation (testcase-evaluator)
 
-> 分工：能力本体是 `evals/evaluate.py`（双通道评测器），本 Skill 只做**编排与解读**，
-> 不重新实现评测逻辑；教程与字段细节一律见 [evals/README.md](../../../evals/README.md)，本文不重复。
-> 上下游：testcase-generator 生成用例、testcase-reviewer 核查原型一致性、本 Skill 给用例质量打分。
+> Division of labor: the capability itself is `evals/evaluate.py` (dual-channel evaluator).
+> This skill only does **orchestration and interpretation** — it never reimplements
+> evaluation logic. Tutorials and field details live in
+> [evals/README.md](../../../evals/README.md) (Chinese; English overview in README.en.md).
+> Upstream/downstream: testcase-generator writes cases, testcase-reviewer checks
+> prototype consistency, this skill grades case quality.
 
-## 使用方式
+## Usage
 
-用户输入 `/eval`，或说"跑评测""评测一下这份用例""给 xxx.md 打分"时触发本 Skill。
-目标不明确时先问清（评登记集 / 指定文件 / 全仓 / 现场生成），不要猜。
+Triggered by `/eval`, or phrases like "run evals", "evaluate this case file",
+"grade xxx.md", "评测一下这份用例", "跑评测". If the target is ambiguous, ask first
+(registered set / specific file / whole repo / live generation) — do not guess.
+Always respond in the user's language.
 
-## 完整执行流程总览
+## Execution Flow Overview
 
-| 顺序 | 执行动作 | 必须 | 条件触发 |
+| Step | Action | Required | Conditional |
 | :--- | :--- | :---: | :--- |
-| 0 | 按 AGENTS.md 读项目配置 + 团队记忆库 README 索引及相关主题（01/03/04） | ✅ | |
-| 1 | 明确评测目标，选模式（见模式速查） | ✅ | |
-| 2 | 探测环境 API key，决定裁判通道是否启用 | ✅ | |
-| 3 | 跑评测器，拿退出码与报告 | ✅ | |
-| 4 | 人话解读结果并汇报 | ✅ | |
-| 5 | 闭环引导：badcase 草稿 / 校准提醒 / 升版本提醒 | | fail 或 judge 跑过或改评分标准时 |
-| 6 | 中间产物归 `_tmp/`，不污染正式目录 | ✅ | |
+| 0 | Per AGENTS.md, read project config + team-memory README index and relevant topics (01/03/04) | ✅ | |
+| 1 | Clarify the evaluation target, pick a mode (see mode table) | ✅ | |
+| 2 | Detect API keys in the environment; decide whether the judge channel runs | ✅ | |
+| 3 | Run the evaluator; collect exit code and reports | ✅ | |
+| 4 | Interpret results in plain language and report | ✅ | |
+| 5 | Closed loop: badcase draft / calibration reminder / version-bump reminder | | on fail, after judge runs, or when the rubric changes |
+| 6 | Intermediate artifacts go to `_tmp/`, never pollute official directories | ✅ | |
 
-## 模式速查
+## Mode Quick Reference
 
-| 用户意图 | 命令 | 说明 |
+| User intent | Command | Notes |
 | :--- | :--- | :--- |
-| 跑评测 / 评登记集 | `python3 evals/evaluate.py` | 在册用例 8 项规则 + 负向对照自测；有 key 加裁判 |
-| 全仓扫 / 检查所有用例文件 | `python3 evals/evaluate.py --scan` | 6 项结构规则，未登记文件也守 |
-| 评指定的未登记文件 | 先 `--scan` 看结构层（仓库外目录用 `--scan-root`） | 内容评（覆盖度/裁判）需登记：`--add 用例 --fixture 需求 --points ①②` 一条命令，见 evals/README 情况 2 |
-| 让 AI 现场写再评 | `python3 evals/evaluate.py --live` | 需 key；简化版（只看文字，无原型图/数据库） |
-| 换模型/换厂商 | 环境 `EVAL_LLM_BASE_URL`/`EVAL_LLM_MODEL` 或 `--judge-model` | 任何 OpenAI 兼容接口 |
+| Run evals / registered set | `python3 evals/evaluate.py` | 8 rules on registered cases + negative-control self-test; judge auto-enabled with a key |
+| Scan all case files | `python3 evals/evaluate.py --scan` | 6 structural rules; covers unregistered files too |
+| Scan a directory outside the repo | `python3 evals/evaluate.py --scan --scan-root DIR` | repeatable; defaults to the project's case directories |
+| Grade a specific unregistered file | `--scan` (or `--scan-root`) first for structure | content grading (coverage/judge) needs registration: `--add CASE.md --fixture REQ.md --points ①②`, see evals/README scenario 2 |
+| Register my own case | `python3 evals/evaluate.py --add CASE.md --fixture REQ.md --points ①②` | copies the fixture, appends to cases.yaml preserving comments; remind the user to desensitize (public repo) |
+| AI writes cases, then grades | `python3 evals/evaluate.py --live` | needs a key; simplified (text only, no prototypes/DB) |
+| Different model/vendor | env `EVAL_LLM_BASE_URL`/`EVAL_LLM_MODEL` or `--judge-model` | any OpenAI-compatible endpoint |
 
-## 执行要点
+## Execution Notes
 
-**第 2 步 key 探测**：`EVAL_LLM_API_KEY` / `GLM_API_KEY` / `OPENAI_API_KEY` 任一存在 → 裁判自动启用；
-都没有 → 只跑规则，并明确告知用户"裁判跳过、不编分数"。key 只从环境读：不写进任何文件、不在对话里回显完整 key。
+**Step 2, key detection**: any of `EVAL_LLM_API_KEY` / `GLM_API_KEY` / `OPENAI_API_KEY`
+present → judge auto-enabled; none → rules only, and tell the user explicitly
+"judge skipped, no scores fabricated". Keys are read from the environment only:
+never written to any file, never echoed in full in chat.
 
-**第 3 步运行**：退出码 0 = 全过，1 = 有失败；报告默认 `evals/reports/`（`--out` 可改）。
-钩子/CI 式简洁输出加 `--brief`（只列挡路条目）。
+**Step 3, running**: exit code 0 = all pass, 1 = failures; reports default to
+`evals/reports/` (override with `--out`). Add `--brief` for hook/CI-style concise
+output (blocking items only).
 
-**第 4 步解读**：
-- 违规翻译成人话：哪份文件、哪一行、犯哪条规则、建议根因（prompt/model/tool/knowledge/evalset）；
-- **负向对照的违规是"成功检出"的证据，不是失败**，不得误报成问题；
-- judge 跑过 → 解释四维分数与理由，并提醒校准完成前分数只作参考。
+**Step 4, interpretation**:
+- Translate violations into plain language: which file, which row, which rule,
+  suggested root cause (prompt/model/tool/knowledge/evalset);
+- **Negative-control violations are evidence of successful detection, not failures** —
+  never report them as problems;
+- Judge ran → explain the four dimension scores and reasons, and remind that scores
+  are reference-only until calibration is done.
 
-**第 5 步闭环（一律人工确认，AI 草稿单独不算数）**：
-- fail → 出 `evals/badcases.yaml` 条目草稿（status open、confirmed_by null），用户确认后才改 fixed；
-- judge 跑过 → 提醒抽样人工复批，一致率追加进 `evals/calibration.yaml`；
-- 用户要收/放评分标准 → 提醒三件套：升 version + 重跑基线 + 重新校准。
+**Step 5, closed loop (always human-confirmed; AI drafts alone don't count)**:
+- fail → draft an `evals/badcases.yaml` entry (status open, confirmed_by null);
+  only mark fixed after the user confirms;
+- judge ran → remind about sampled human re-review; append agreement rates to
+  `evals/calibration.yaml`;
+- user wants to tighten/loosen the rubric → remind the three-piece set:
+  bump version + re-run baseline + re-calibrate.
 
-## 红线
+## Red Lines
 
-- 不伪造分数：无 key 就跳过，judge 失败如实记 error。
-- key 不落盘、私有信息不入库（项目级红线见 AGENTS.md）。
-- 根因确认、校准复批必须人工；本 Skill 只出草稿与提醒。
-- 不依赖其他 skill：直接跑 evals/ 脚本（项目 Skill 健壮性原则）。
+- Never fabricate scores: no key → skip; judge failure → record the error honestly.
+- Keys never touch disk; private info never enters the repo (project-level red lines in AGENTS.md).
+- Root-cause confirmation and calibration re-review must be human; this skill only drafts and reminds.
+- No dependency on other skills: run evals/ scripts directly (project skill-robustness principle).

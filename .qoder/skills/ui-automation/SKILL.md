@@ -10,6 +10,7 @@ description: >
   持续进化。使用场景：用户提供 TAPD 需求 ID 且需求涉及 PC后台/总后台/H5商城
   网页操作、要求"测用例/执行用例/UI自动化测试"时。非网页类需求不适用，
   不要因"辅助测试"类表述触发本 Skill 的浏览器流程。
+  English: browser-use driven UI test execution for web-based TAPD cases (requires browser-use MCP; web requirements only).
 ---
 
 # TAPD 需求 UI 自动化测试
