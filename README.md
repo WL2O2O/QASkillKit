@@ -27,6 +27,7 @@
 | 🖼️ 三轨 OCR 识图 | `ocr` | — | 被其他 skill 自动调用 | Windows OCR（覆盖率）+ OpenOCR（精读）+ VLM（结构）三通道交叉验证 |
 | ⚙️ 初始化向导 | `setup` | `/setup` | 首次使用运行 | 自动探测 TAPD 项目/数据库连接/知识库，生成私有配置 |
 | 🧪 Agent 评测 | `evals/` 模块 | — | `python3 evals/evaluate.py` | YAML 评测集 + 规则断言/LLM-as-Judge 双通道；零 key 可跑、无需 TAPD，负向对照自测 |
+| 🧪 用例评测 | `testcase-evaluator` | `/eval` | `评测一下这份用例` / `跑评测` | evals 模块的对话入口：自动选登记评测/全仓扫描/--live，人话解读违规，badcase 根因与校准待人工确认 |
 
 ## 🏗️ 架构设计
 

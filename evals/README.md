@@ -2,6 +2,9 @@
 
 > 一句话说明：这个模块是**改作业的老师**——只改已经写好的测试用例，不管用例是谁写的、怎么写的。
 > 写用例是 testcase-generator skill 的事（它要去 TAPD 拿需求）；改用例是本模块的事（只看用例文件，全程不碰 TAPD）。
+>
+> Agent 用户：在 Qoder/Claude Code 里直接说 `/eval` 或"评测一下这份用例"（testcase-evaluator skill），
+> 自动选模式、跑完人话解读；能力本体与教程仍是本模块。
 
 ## 先对号入座：你是哪种情况？
 
