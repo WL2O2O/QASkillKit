@@ -64,3 +64,36 @@
 - 意外收获 2（bc-0004，裁判宽松，待人工确认）：B 那份 `tc-1020256-executed` 规则通道查出覆盖 0/5、缺变更点说明、4 处"同上"，Judge 却给四维全 5.0（另两条也只 5.0→4.8/4.5，仍在及格线内）。说明**只靠 LLM 裁判当门禁会放过这种退步**，规则通道不是可选项；coverage 维度定义要不要收紧属评分标准变更，需人工确认 + 升评测集版本 + 重跑基线 + 重新校准，本次未动；
 - 待办：A/B 两份 live+judge 报告可当 v3 的 Judge 参考样本，但尚未人工抽样复批，一致率待补记 calibration.yaml；bc-0003/bc-0004 的 confirmed_by 仍为 null（open 草稿，pytest 已放宽为"只有 open 允许无人工确认"）；
 - 文档同步：evals/README 新增「A/B prompt 回归演示」节（含真实 diff 节选与两条发现）、pytest 条数与基线诚实声明更新，中英 README 各加一段，testcase-evaluator SKILL.md 模式表加 ab-demo.sh 与 --sut-prompt 两行。
+
+## bc-0004 治疗记录（2026-11-13，评测集 v3 → v4：收紧裁判标准）
+
+- 触发：A/B 演示量出裁判宽松——B 变体产出规则通道查出覆盖 0/5、缺变更点说明、4 处"同上"，Judge 仍给四维全 5.0；用户判定"发现即治疗"，同意升级维度定义；
+- 改标准（evaluate.py）：`DIM_DEFS["coverage"]` 从一句笼统描述改成可执行流程——先拆变更点清单 → 逐点核对有无对应用例 → 按分数上限表打分（全覆盖含边界=5、全覆盖边界少=4、漏 1 点或全无边界=3、漏 2 点以上=2、只写主流程=1），且 reason 必须写出核对结论；`DIM_DEFS["consistency"]` 纳入输出契约（列结构完整、优先级只用 P0/P1/P2、禁止"同上/见上文"，违背任一项不高于 3）；judge prompt 新增评审约定 4「格式退化不等于内容合格」与 5「先做变更点核对再评其余维度」；
+- 可测性重构：judge prompt 拼装抽成 `build_judge_prompt()`，零 key 就能自测评分标准文本（TestJudgeRubric 5 条：版本 ≥4、coverage 上限表齐 5 档、consistency 含契约关键词、prompt 携带全部维度与约定、bc-0004 已确认且记录 v3→v4），pytest 总数 94 → 99；
+- 升版本 + 重跑基线：cases.yaml `meta.version` 3 → 4；`reports/baseline-2026-11-13-145132.*` 为 v4 零 key 基线，与 v3 基线 `--diff` = 退步 0 / 变好 0 / 说明 1「评测集版本不同」，证明只动了裁判标准、没扰动规则通道；
+- 重新校准（待 key，未做不得声称已生效）：需 export key 后 ① `python3 evals/evaluate.py`（v4 登记评测 Judge 基线，12 次调用）② `FORCE=1 bash evals/ab-demo.sh`（A/B 各重跑，约 60 次调用），验收标准「B 变体 coverage < 4、A 变体仍高分」；跑完抽样人工复批并追加 calibration.yaml 记录；
+- 文档同步：evals/README「裁判校准实录」新增第二次校准小节（v3→v4 全过程 + 待验证声明）、A/B 节发现 2 改为"已确认并治疗"、基线诚实声明区分 v3/v4 与 ab-demo 报告的裁判标准版本，中英 README 各补一句"裁判短板已量化并收紧标准，门禁以规则通道为准"；badcases.yaml bc-0003 置 fixed、bc-0004 置 confirmed（confirmed_by WL2O2O）。
+
+## v4 裁判标准首轮验证记录（2026-11-13，export key 实跑：**未达验收标准**）
+
+- 实跑三份带 Judge 的报告：① `reports/baseline-2026-11-13-165241.*`（v4 登记评测，offline+judge，12 条全有分数，正样本均分 4.75/4.75/4.25，exit_ok=True，覆盖 13/13）② `ab-demo/a/baseline-2026-11-13-170553.*`（v4 A 臂 live+judge）③ `ab-demo/b/baseline-2026-11-13-170848.*`（v4 B 臂 live+judge）；A/B 对比 `diff-…170553-vs-…170848.md` = ❌退步 50 项 / ✅变好 2 项 / ℹ️说明 6 项（比 v3 那轮的 37 项多，因为表头漂移兜底现在把 6 列表格的每一行都记账），退出码 1；
+- 对照验收标准「B 变体 coverage < 4、A 变体仍高分」：**方向对了但没达标**——B 的 coverage 从 v3 那轮 5/5/5 掉到 **3/3/4**、理由里出现"覆盖 x/y"核对句式，可四维均分 4.50/4.50/4.75 **仍全部 ≥4**，这轮判 fail 完全靠规则通道；
+- 关键发现（bc-0005，open）：裁判把核对动作演出来了但**结论是编的**——B 的 tc-1000001-good 实际覆盖 0 点、无变更点说明，理由写"变更点1、2、3、4、5、6均覆盖"；反过来 165241 的正样本 tc-1000001-good 规则通道确认 ①②③ 全覆盖（fixture 只有 3 点），裁判扣到 4 分说"②③无用例对应，仅覆盖 3/5"；consistency 明写"违背契约任一项不高于 3"，B 三份都是 6 列表格 + "高/中"优先级 + "执行TC1操作"引用，裁判仍全给 5 分并断言"优先级使用 P0/P1/P2"；
+- 其他如实记录：v4 A 臂 exit_ok=False（`--live` 生成波动，tc-1020256-executed 漏变更点⑤，覆盖 12/13）→ 说明 live A/B 单次结果要连着看，生成波动本身就该暴露；1 条负向对照 Judge 调用被远端断连（tc-neg-expected-empty，报告显示"—"，不补分）；v3 那轮 A/B 报告仍未经人工抽样复批，一致率待补 calibration.yaml；
+- 脚本 bug 与修复：`run_variant` 原来用"目录空才拷快照"的判断，导致 `FORCE=1` 重跑时快照不刷新——v3 的产物一直躺在 `a/cases`、`b/cases` 里配着 v4 的报告。改为**按运行时间戳落盘** `cases-HHMMSS/`（`git mv` 旧目录为 `a/cases-092720`、`b/cases-093523`，v4 B 产物抢救进 `b/cases-170848/`）；**v4 A 臂的现场生成产物已被 `_tmp/eval-live` 覆盖丢失**，只剩报告 json/md（诚实声明已写进 evals/README）；
+- 新登记 bc-0006（open）：`JUMP_RE` 漏掉"执行TC1操作"式跨用例引用（b/cases-170848/tc-1020256-executed.md 前置条件列 4 处），该轮 no_jump_refs 合规率仍显示 100%；
+- 测试：TestAbDemoArtifacts 改为遍历所有 `cases-*` 快照（任何一轮 B 的退化产出都必须被抓）、bc-0003 锚点钉在 v3 那轮的 `cases-093523`、新增 v4 B 快照锚点（缺关联引用列 + "高/中"优先级）、diff 断言钉住首轮文件名并另加"每份 diff 都必须含 ❌退步"通用断言；pytest 99 → **101 条全绿**；
+- 结论与待决：机械可判的事（覆盖几点/列数/优先级合法性）不能指望小模型裁判，门禁只认规则通道。下一步三选一待用户定：(a) 把 cases.yaml 的变更点清单注入 judge prompt（核对给定清单而非自己拆）(b) coverage 归规则通道、裁判只评粒度/边界/异常并放宽上限 (c) 换更强裁判模型或多数投票再测；
+- 文档同步：evals/README「裁判校准实录」把"待 key 验证"改成实跑结论（含四条证据）、A/B 节加第二轮 50 项退步与产物布局说明、pytest 条数 94→101、基线诚实声明列出三份带 Judge 报告及其裁判标准版本并声明 A 臂 v4 快照丢失；中英 README 各把"待复跑验证"改成实测结论；badcases.yaml bc-0004 fix_ref 记"未达验收标准、不标 fixed"，新增 bc-0005/bc-0006 两条 open 草稿（confirmed_by null，等人工确认）。
+
+## 评测集 v5 治疗记录（2026-11-13，bc-0005 的 (a)+(b) 组合：机械事实不再让裁判自己算）
+
+- 触发：v4 首轮实跑未达验收标准（B 的 coverage 3/3/4、四维均分 4.50/4.50/4.75 仍全部过线；裁判把"逐点核对"演出来但结论是编的；consistency 的降分上限被无视）。用户选定 (a)+(b) 组合方向，bc-0005 由 open 转 confirmed（confirmed_by WL2O2O；root_cause 仍记 model——小模型指令遵循不足，治疗动作落在评测集侧）；
+- (a) 喂事实：cases.yaml 新增顶层 `change_points` 段，按 fixture 给 ground-truth 变更点清单（1000001 三点、1000002 五点、1020256 五点，内容取自登记正样本的「变更点说明」表，即评测集认定的参考答案口径）；`build_judge_prompt(fixture, output, cfg, points, rule_findings)` 注入两块事实——【变更点清单（评测集给定的 ground truth，不要自己另拆一份）】与【规则通道已检出的确定性违规（不得推翻、不得重算、不得视而不见）】；规则通道干净时显式写"无（8 条规则全部通过）"，用例没登记清单时显式写"未登记"并要求裁判自拆后在 reason 里先列清单，不留空给它瞎猜；
+- (b) 改 coverage：`DIM_DEFS["coverage"]` 从"自己拆清单+逐点核对+上限表"改为"覆盖充分性"——机械覆盖度归规则通道，裁判只评边界值/异常场景/状态分支/数据组合/粒度，5 档上限按此重写，reason 必须落到具体缺口、禁止"覆盖充分"这类套话；`consistency` 改为语义一致性（术语统一、前置与步骤不矛盾、预期与步骤对得上、不依赖另一条用例）+ 规则通道列出契约违背时不高于 3；评审约定重排为 4「分工：能机器判的归规则通道」/ 5「规则通道有违规则 coverage、consistency 不得高于 3」/ 6「禁止编造清单里没有的变更点」；
+- 接线：main() 从 `cfg["change_points"][case["fixture"]]` 取清单，把 violations 展平成 "case / rule：明细" 一并传给 judge()；
+- 升版本 + 重跑基线：meta.version 4 → 5；`reports/baseline-2026-11-13-205017.*` 为 v5 零 key 基线，与 v4 零 key 基线（145132）`--diff` = **退步 0 / 变好 0 / 说明 1「版本不同」**，确认只动裁判侧；另用假 key + 不可达端点探测新 prompt 拼装不崩（Judge 调用失败如实记 "—"，不补分）；
+- 测试：pytest 101 → **107 条全绿**（清单编号必须与 expected_change_points 一致、prompt 注入清单与规则结论、无 findings 时写"无（8 条规则全部通过）"、无清单时的"未登记"兜底、monkeypatch llm_chat 验 judge() 转发、inspect.getsource 锁主流程接线防回归）；
+- 待验证（需 key，未跑不得声称已生效）：`python3 evals/evaluate.py` + `FORCE=1 bash evals/ab-demo.sh`，验收标准「B 变体 Judge 均分 < 4 且理由不与规则通道结论矛盾、A 变体仍高分」；跑完按校准实录方法抽样人工复批、追加 calibration.yaml；
+- 代价与立场：喂事实等于放弃裁判在机械项上的独立性，用独立性换可靠性；门禁仍只认规则通道。bc-0006（`JUMP_RE` 漏"执行TC1操作"式引用）本轮未治疗，保持 open；
+- 文档同步：evals/README 新增「第三次校准：v4 → v5」小节、`--add` 节补 change_points 用法、pytest 条数、A/B 节补一句 v5、诚实声明列出 v5 零 key 基线并声明"带 Judge 分数的三份都是 v4 标准下跑的"；中英 README 各补一句 v5 与其未验证状态；testcase-evaluator SKILL.md 补 v5 分工说明与 root_cause 枚举 evaluator。

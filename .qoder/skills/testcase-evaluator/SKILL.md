@@ -74,11 +74,17 @@ output (blocking items only).
 
 **Step 4, interpretation**:
 - Translate violations into plain language: which file, which row, which rule,
-  suggested root cause (prompt/model/tool/knowledge/evalset);
+  suggested root cause (prompt/model/tool/knowledge/evalset/evaluator);
 - **Negative-control violations are evidence of successful detection, not failures** —
   never report them as problems;
 - Judge ran → explain the four dimension scores and reasons, and remind that scores
   are reference-only until calibration is done.
+- Judge ran → since v5 the prompt carries the evalset's ground-truth change-point
+  list (`change_points` in cases.yaml) plus the rule channel's findings, and the judge
+  is told not to re-derive or overrule them: if a reason still contradicts those findings
+  or invents change points, draft a badcase (bc-0005 pattern) instead of trusting the score;
+- `coverage` now rates scene sufficiency and granularity only — per-change-point coverage
+  is decided by the rule channel, so never present a judge coverage score as coverage proof.
 
 **Step 5, closed loop (always human-confirmed; AI drafts alone don't count)**:
 - fail → draft an `evals/badcases.yaml` entry (status open, confirmed_by null);

@@ -18,6 +18,7 @@
 
 运行：python3 -m pytest evals/tests -q
 """
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -241,21 +242,33 @@ class TestHeaderDriftFallback:
 
 
 class TestAbDemoArtifacts:
-    """A/B prompt 演示的真实产物做锚点：B 变体必须被检出，A 变体必须干净。"""
+    """A/B prompt 演示的真实产物做锚点：B 变体必须被检出，A 变体必须干净。
+
+    每次 --live 跑完，快照目录按运行时间戳落盘（cases-HHMMSS），所以一个变体
+    下可能有多次运行的产物；这里遍历所有快照，任何一次 B 的退化产出都必须被抓。
+    """
 
     AB = EVAL_DIR / "ab-demo"
+    # 首轮 A/B 演示（v3 裁判）的运行时间戳，用于钉住具体锚点
+    V3_A, V3_B = "cases-092720", "cases-093523"
+    V4_B = "cases-170848"
+
+    @staticmethod
+    def snapshots(variant):
+        return sorted(p for p in (TestAbDemoArtifacts.AB / variant).glob("cases-*") if p.is_dir())
 
     def test_variant_b_outputs_are_flagged(self):
-        cases = sorted((self.AB / "b" / "cases").glob("*.md"))
-        assert cases, "缺 A/B 演示产物：先跑 bash evals/ab-demo.sh"
-        for path in cases:
-            v, _ = evaluate.rule_check(path.read_text(encoding="utf-8"), ["①", "②", "③"])
-            assert v["format_columns"], "%s 应检出表头/列数问题" % path.name
-            assert v["change_section"], "%s 应检出缺少变更点说明" % path.name
+        snaps = self.snapshots("b")
+        assert snaps, "缺 A/B 演示产物：先跑 bash evals/ab-demo.sh"
+        for snap in snaps:
+            for path in sorted(snap.glob("*.md")):
+                v, _ = evaluate.rule_check(path.read_text(encoding="utf-8"), ["①", "②", "③"])
+                assert v["format_columns"], "%s/%s 应检出表头/列数问题" % (snap.name, path.name)
+                assert v["change_section"], "%s/%s 应检出缺少变更点说明" % (snap.name, path.name)
 
     def test_variant_b_blind_spot_regression(self):
-        # bc-0003 锚点：这三处曾被"列数≠9 就 continue"漏掉
-        b = self.AB / "b" / "cases"
+        # bc-0003 锚点：这三处曾被"列数≠9 就 continue"漏掉（v3 那轮的 B 产出）
+        b = self.AB / "b" / self.V3_B
         v, _ = evaluate.rule_check((b / "tc-1000001-good.md").read_text(encoding="utf-8"), [])
         assert any("P3" in m for m in v["priority_valid"])
         v, _ = evaluate.rule_check((b / "tc-1000002-good.md").read_text(encoding="utf-8"), [])
@@ -263,17 +276,40 @@ class TestAbDemoArtifacts:
         v, _ = evaluate.rule_check((b / "tc-1020256-executed.md").read_text(encoding="utf-8"), [])
         assert v["no_jump_refs"], "前置条件里的「同上」应被检出"
 
-    def test_variant_a_outputs_are_clean(self):
-        for path in sorted((self.AB / "a" / "cases").glob("*.md")):
+    def test_variant_b_v4_run_still_flagged(self):
+        # v4 那轮的 B 产出：缺关联引用列 + 中文优先级也必须被抓（不能只靠 v3 快照）
+        b = self.AB / "b" / self.V4_B
+        assert b.is_dir(), "缺 v4 轮的 B 快照：%s" % b.name
+        for path in sorted(b.glob("*.md")):
             v, _ = evaluate.rule_check(path.read_text(encoding="utf-8"), [])
-            assert all(v[r] == [] for r in evaluate.RULES), "%s 不该有违规：%s" % (
-                path.name, {k: x for k, x in v.items() if x})
+            assert v["traceability"], "%s 应检出缺少关联引用列" % path.name
+            assert v["format_columns"], "%s 应检出表头非标准 9 列" % path.name
+        # 这轮 tc-1000001-good 用的是合法 P0/P1，另两份写成了「高/中」
+        v, _ = evaluate.rule_check((b / "tc-1000002-good.md").read_text(encoding="utf-8"), [])
+        assert any("'高'" in m for m in v["priority_valid"])
+        v, _ = evaluate.rule_check((b / "tc-1020256-executed.md").read_text(encoding="utf-8"), [])
+        assert any("'中'" in m for m in v["priority_valid"])
+
+    def test_variant_a_outputs_are_clean(self):
+        snaps = self.snapshots("a")
+        assert snaps, "缺 A/B 演示产物：先跑 bash evals/ab-demo.sh"
+        for snap in snaps:
+            for path in sorted(snap.glob("*.md")):
+                v, _ = evaluate.rule_check(path.read_text(encoding="utf-8"), [])
+                assert all(v[r] == [] for r in evaluate.RULES), "%s/%s 不该有违规：%s" % (
+                    snap.name, path.name, {k: x for k, x in v.items() if x})
 
     def test_diff_report_records_regressions(self):
+        # 首轮（v3）对比：A 干净 → B 退化，exit_ok 由 True 翻 False
+        first = self.AB / "diff-baseline-2026-11-13-092720-vs-baseline-2026-11-13-093523.md"
+        text = first.read_text(encoding="utf-8")
+        assert "❌ 退步" in text and "exit_ok：True → False" in text
+
+    def test_every_diff_report_has_regressions(self):
         diffs = sorted(self.AB.glob("diff-*.md"))
         assert diffs, "缺 A/B 对比报告：先跑 bash evals/ab-demo.sh"
-        text = diffs[-1].read_text(encoding="utf-8")
-        assert "❌ 退步" in text and "exit_ok：True → False" in text
+        for path in diffs:
+            assert "❌ 退步" in path.read_text(encoding="utf-8"), "%s 应记录退步项" % path.name
 
 
 # ---------- 3. 扫描逻辑 ----------
@@ -412,6 +448,106 @@ class TestDiscrimination:
 
 
 # ---------- 6. 工具函数 ----------
+
+class TestJudgeRubric:
+    """锁住裁判的评分标准文本（v4 收紧 bc-0004 → v5 分工重划 bc-0005）：零 key、不联网，只查 prompt 拼装。"""
+
+    @pytest.fixture(scope="class")
+    def jcfg(self):
+        cfg = yaml.safe_load((EVAL_DIR / "cases.yaml").read_text(encoding="utf-8"))
+        return cfg["meta"]["judge"]
+
+    def test_evalset_version_bumped_for_rubric_change(self, jcfg):
+        # 评分标准变了就得升版本（三件套：升版本 + 重跑基线 + 重新校准）
+        assert jcfg is not None
+        meta = yaml.safe_load((EVAL_DIR / "cases.yaml").read_text(encoding="utf-8"))["meta"]
+        assert meta["version"] >= 5
+
+    def test_coverage_defers_mechanical_check_to_rules(self):
+        # v5：coverage 不再让裁判自己拆清单/数覆盖，只评场景充分性与粒度（bc-0005 治疗）
+        d = evaluate.DIM_DEFS["coverage"]
+        assert "变更点清单" in d and "不重复判" in d
+        assert "边界值" in d and "异常场景" in d
+        for score in ("5=", "4=", "3=", "2=", "1="):
+            assert score in d, "coverage 缺 %s 档定义" % score
+        assert "禁止只写" in d   # reason 必须给具体缺口，不许套话
+
+    def test_consistency_covers_output_contract(self):
+        d = evaluate.DIM_DEFS["consistency"]
+        # 契约项交给规则通道判，但裁判不得推翻其结论，且有明确降分上限
+        assert "P3" in d and "同上" in d and "关联引用" in d
+        assert "不得否认" in d and "不高于 3" in d
+
+    def test_change_points_ground_truth_matches_expected(self):
+        # 喂给裁判的清单必须与规则通道用的 expected_change_points 同编号，否则两通道各说各话
+        cfg = yaml.safe_load((EVAL_DIR / "cases.yaml").read_text(encoding="utf-8"))
+        cp = cfg["change_points"]
+        for c in cfg["cases"]:
+            assert c["fixture"] in cp, "%s 的 fixture 缺 change_points 清单" % c["id"]
+            symbols = [x[0] for x in cp[c["fixture"]]]
+            assert symbols == c["expected_change_points"], (
+                "%s 清单编号 %s 与 expected_change_points %s 不一致"
+                % (c["id"], symbols, c["expected_change_points"]))
+            assert all(len(x) > 6 for x in cp[c["fixture"]]), "清单条目应含描述，不能只有编号"
+
+    def test_judge_prompt_injects_checklist_and_rule_findings(self, jcfg):
+        p = evaluate.build_judge_prompt(
+            "需求原文X", "用例产出Y", jcfg,
+            points=["① 变更点一", "② 变更点二"],
+            rule_findings=["tc-x / coverage：变更点②未被任何用例覆盖"])
+        assert "【变更点清单" in p and "① 变更点一" in p and "② 变更点二" in p
+        assert "不要自己另拆" in p
+        assert "【规则通道已检出的确定性违规" in p
+        assert "变更点②未被任何用例覆盖" in p and "不得推翻" in p
+
+    def test_judge_prompt_without_findings_says_clean(self, jcfg):
+        p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg, points=["① a"])
+        assert "无（8 条规则全部通过）" in p
+
+    def test_judge_prompt_without_checklist_falls_back(self, jcfg):
+        # --add 登记的用例可能还没写 change_points：必须显式告诉裁判"未登记"，不能留空让它瞎猜
+        p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg)
+        assert "未登记" in p and "自行从需求原文拆出清单" in p
+
+    def test_judge_forwards_checklist_and_findings(self, jcfg, monkeypatch):
+        # 真联网跑不了，但 prompt 拼装必须带上清单与规则结论：截住 llm_chat 看它收到什么
+        seen = {}
+
+        def fake_llm_chat(messages, model, base, key):
+            seen["prompt"] = messages[0]["content"]
+            return json.dumps({d: {"score": 5, "reason": "r"} for d in jcfg["dimensions"]})
+
+        monkeypatch.setattr(evaluate, "llm_chat", fake_llm_chat)
+        evaluate.judge("需求X", "产出Y", jcfg, "m", "http://b", "k",
+                       points=["① 清单条目"], rule_findings=["tc / coverage：变更点①未被任何用例覆盖"])
+        assert "① 清单条目" in seen["prompt"]
+        assert "变更点①未被任何用例覆盖" in seen["prompt"]
+
+    def test_main_wires_change_points_from_evalset(self):
+        # 防回归：主流程必须从 cases.yaml 的 change_points 取清单、并把违规明细传给裁判
+        src = inspect.getsource(evaluate.main)
+        assert 'cfg.get("change_points")' in src
+        assert "points, findings" in src
+
+    def test_judge_prompt_carries_dims_and_conventions(self, jcfg):
+        p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg)
+        for dim in jcfg["dimensions"]:
+            assert "- %s：" % dim in p, "prompt 缺维度 %s" % dim
+        for rule in ("格式退化不等于内容合格", "分工", "只输出 JSON",
+                     "实际结果」列在执行阶段才填写", "禁止编造清单里没有的变更点"):
+            assert rule in p, "prompt 缺评审约定：%s" % rule
+        assert "需求原文X" in p and "用例产出Y" in p
+
+    def test_rubric_change_is_documented(self):
+        bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
+        e4 = next(x for x in bc["entries"] if x["id"] == "bc-0004")
+        assert e4["status"] in ("confirmed", "fixed") and e4["confirmed_by"]
+        assert "v3 → v4" in e4["fix_ref"]
+        # v5 治疗（bc-0005）必须已人工确认方向，且如实写明"待 key 复跑验证"
+        e5 = next(x for x in bc["entries"] if x["id"] == "bc-0005")
+        assert e5["confirmed_by"] and e5["status"] in ("confirmed", "fixed")
+        assert "v4 → v5" in e5["fix_ref"] and "待" in e5["fix_ref"]
+
 
 class TestExtractJson:
     def test_plain(self):

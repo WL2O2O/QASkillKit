@@ -59,10 +59,33 @@ SUGGESTED_ROOT_CAUSE = {
 # Judge 维度定义：显式写明含义与方向（一律"分越高越好"）。
 # 2026-11-12 首次真实运行校准产物：修复 hallucination 极性误解与"实际结果列为空"误判，
 # 见 badcases.yaml bc-0001 / bc-0002。
+# 2026-11-13 A/B prompt 演示发现裁判对格式/覆盖退化几乎无感（B 变体覆盖 0/5 仍给四维 5.0），
+# coverage 改为"先逐变更点核对再打分 + 分数上限"、consistency 纳入输出契约，见 bc-0004。
+# 2026-11-13 v4 实跑验证未达标（裁判把核对动作演出来但结论是编的、上限压不住，见 bc-0005）：
+# 改为"机械事实不让裁判自己算"——变更点清单由评测集注入（不再让裁判自己拆），
+# 规则通道已检出的违规作为既定事实注入（裁判不得否认），coverage 只评粒度/边界/异常充分性。
 DIM_DEFS = {
-    "coverage": "覆盖度：用例是否覆盖需求的全部变更点与主要场景。5=变更点全覆盖且粒度合理；仅缺个别极端边界不低于4",
+    "coverage": (
+        "覆盖充分性：本次需求的变更点清单已在下方【变更点清单】给出，"
+        "\"每个变更点有没有对应用例\"由规则通道机械判定（结果见【规则通道已检出的确定性违规】），"
+        "本维度**不重复判这件事、也不得自己另拆一份清单**。你只评用例的场景充分性与粒度："
+        "边界值（阈值临界、上下限、空值/超长）、异常场景（失败、超时、并发、权限不足、数据不存在）、"
+        "状态分支与数据组合是否写到，步骤与预期是否细到可照着执行。分数上限："
+        "5=主要变更点都有主流程 + 边界 + 异常，粒度可直接执行；"
+        "4=主流程齐、边界或异常有少量缺口；3=基本只有主流程，边界与异常缺失；"
+        "2=多数变更点只有一条笼统用例，粒度不足以指导执行；1=用例过于笼统或与需求脱节。"
+        "reason 必须写出你核对到的具体缺口（例如\"变更点②只写了成功路径，缺未开通租户的报错分支\"），"
+        "禁止只写\"覆盖全面\"这类结论性套话。"
+    ),
     "relevance": "相关性：每条用例是否直接对应需求中的功能点或规则。5=全部直接相关",
-    "consistency": "一致性：用例间格式、术语、逻辑是否一致，预期结果是否具体可验证。5=完全一致",
+    "consistency": (
+        "一致性：用例自身是否前后一致且可独立执行——术语与字段名前后统一、"
+        "前置条件与操作步骤不矛盾、预期结果与操作步骤对得上、一条用例不依赖另一条才能读懂。"
+        "**列结构、优先级取值、跳转引用这类可机械判定的输出契约由规则通道判**："
+        "【规则通道已检出的确定性违规】里列出的事实不得否认、不得说\"符合要求\"，"
+        "只要其中存在任一条契约违背（列数漂移、P3 或\"高/中/低\"、\"同上/见上文/参见\"、"
+        "缺关联引用列），本维度不高于 3；没有契约违背时才按语义一致性给 4-5。"
+    ),
     "hallucination": "无幻觉程度：是否虚构需求中不存在的事实（功能、业务数据、凭证、内网地址）。5=完全无虚构，1=大量虚构；明确标注为示例/占位的测试账号不算虚构",
 }
 
@@ -354,10 +377,29 @@ def extract_json(text):
     return json.loads(text[text.find("{"):text.rfind("}") + 1])
 
 
-def judge(fixture, output, cfg, model, base, key):
+def build_judge_prompt(fixture, output, cfg, points=None, rule_findings=None):
+    """拼裁判 prompt（独立成函数，便于零 key 自测锁住评分标准文本，见 tests）。
+
+    points：评测集给定的变更点清单（ground truth），注入后裁判只核对这份清单、不自己拆；
+    rule_findings：规则通道已检出的违规明细，作为确定性事实注入，裁判不得否认
+    （v4 实测：小模型会自己编核对结论、还会断言"优先级使用 P0/P1/P2"而产物写的是"高/中"，见 bc-0005）。
+    """
     dims = cfg["dimensions"]
     dim_lines = "\n".join("- %s：%s" % (d, DIM_DEFS.get(d, "按维度名含义评审")) for d in dims)
-    prompt = (
+    blocks = []
+    if points:
+        blocks.append("【变更点清单（评测集给定的 ground truth，不要自己另拆一份）】\n"
+                      + "\n".join("- %s" % p for p in points))
+    else:
+        blocks.append("【变更点清单（评测集给定的 ground truth，不要自己另拆一份）】\n"
+                      "- 未登记：本条用例的评测集条目没写 change_points，请自行从需求原文拆出清单，"
+                      "并在 coverage 的 reason 里先列出你拆到的清单再评场景充分性")
+    if rule_findings:
+        blocks.append("【规则通道已检出的确定性违规（机器判定，事实不可推翻；没有列出即为未发现）】\n"
+                      + "\n".join("- %s" % f for f in rule_findings))
+    else:
+        blocks.append("【规则通道已检出的确定性违规】\n- 无（8 条规则全部通过）")
+    return (
         "你是严格的测试用例质量评审员。对照需求原文评审用例产出，按 1-5 分打分"
         "（5=完全满足，4=少量可接受瑕疵，3=明显问题，2=严重问题，1=完全不符）。\n"
         "所有维度都是分数越高越好。维度定义：\n%s\n"
@@ -365,8 +407,21 @@ def judge(fixture, output, cfg, model, base, key):
         "1. 「实际结果」列在执行阶段才填写，设计阶段为空属正常，不算缺陷、不算幻觉。\n"
         "2. reason 必须与 score 方向一致：理由说没有问题就必须给高分。\n"
         "3. 用例文件头部的元信息（脱敏声明、样本类型标注等）不属于用例内容，不参与打分。\n"
+        "4. 分工：能机器判定的事（变更点是否逐条被覆盖、列结构、优先级取值、跳转引用、"
+        "敏感信息）由规则通道判，其结论已在下方给出，你不得推翻、不得重算、不得视而不见；"
+        "你只评机器判不了的事（场景充分性与粒度、相关性、前后一致、有无虚构）。\n"
+        "5. 格式退化不等于内容合格：只要【规则通道已检出的确定性违规】非空，"
+        "coverage 与 consistency 均不得给 4 分以上。\n"
+        "6. reason 必须落到具体证据（哪条用例、哪个变更点、缺什么场景），"
+        "禁止写\"覆盖全面\"\"符合要求\"这类没有证据的结论；也禁止编造清单里没有的变更点。\n"
         "只输出 JSON，格式 {\"维度名\": {\"score\": 数字, \"reason\": \"一句话理由\"}}。\n\n"
-        "【需求原文】\n%s\n\n【用例产出】\n%s" % (dim_lines, fixture, output))
+        "%s\n\n【需求原文】\n%s\n\n【用例产出】\n%s"
+        % (dim_lines, "\n\n".join(blocks), fixture, output))
+
+
+def judge(fixture, output, cfg, model, base, key, points=None, rule_findings=None):
+    dims = cfg["dimensions"]
+    prompt = build_judge_prompt(fixture, output, cfg, points, rule_findings)
     raw = llm_chat([{"role": "user", "content": prompt}], model, base, key)
     scores = extract_json(raw)
     for d in dims:
@@ -590,11 +645,16 @@ def main():
 
         violations, stats = rule_check(output, case["expected_change_points"])
         rule_pass = all(not violations[r] for r in RULES)
+        # v5：把评测集给定的变更点清单与规则通道的确定性结论一起喂给裁判（bc-0005 治疗）
+        points = (cfg.get("change_points") or {}).get(case["fixture"])
+        findings = ["%s / %s：%s" % (case["id"], rule, msg)
+                    for rule in RULES for msg in violations[rule]]
 
         judge_scores, judge_note = None, "skipped（无 API key，仅规则通道）"
         if key:
             try:
-                judge_scores = judge(fixture, output, jcfg, judge_model, base, key)
+                judge_scores = judge(fixture, output, jcfg, judge_model, base, key,
+                                     points, findings)
                 judge_note = "model=%s" % judge_model
             except Exception as e:  # judge 失败不伪造分数，明确记录
                 judge_note = "error: %s" % e

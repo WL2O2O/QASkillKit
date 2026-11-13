@@ -12,8 +12,8 @@
 #   FORCE=1 bash evals/ab-demo.sh # 强制重跑两个变体
 #
 # 产物（全部落仓库目录，方便事后阅读/入库）：
-#   evals/ab-demo/a/  A 变体报告 json+md，a/cases/ 是 A 现场生成的用例快照
-#   evals/ab-demo/b/  B 变体报告 json+md，b/cases/ 同上
+#   evals/ab-demo/a/  A 变体报告 json+md，a/cases-HHMMSS/ 是那一轮 A 现场生成的用例快照
+#   evals/ab-demo/b/  B 变体报告 json+md，b/cases-HHMMSS/ 同上（按运行时间戳分目录，重跑不覆盖旧证据）
 #   evals/ab-demo/diff-*.md  回归对比报告（预期：B 退步若干项，对比退出码 1 属正常）
 #
 # 注意：key 只从环境读，脚本不写盘、不打印；每个变体 = 3 次生成 + 12 次 Judge 调用，
@@ -34,7 +34,7 @@ if [ -z "${EVAL_LLM_API_KEY:-}" ] && [ -z "${GLM_API_KEY:-}" ] && [ -z "${OPENAI
   exit 1
 fi
 
-mkdir -p "$OUT/a/cases" "$OUT/b/cases"
+mkdir -p "$OUT/a" "$OUT/b"
 
 latest_json () { ls -t "$OUT/$1"/*.json 2>/dev/null | head -1; }
 
@@ -46,21 +46,32 @@ run_variant () {  # $1=目录名（a/b） $2...=传给 evaluate.py 的额外参�
   local exist; exist="$(latest_json "$dir")"
   if [ -n "$exist" ] && [ "${FORCE:-0}" != "1" ]; then
     echo "↷ 已有报告，跳过生成（要重跑用 FORCE=1）：$exist"
-  else
-    echo "→ 现场生成 3 条正样本用例 + 12 条 Judge 打分，约 2-5 分钟，期间无输出属正常"
-    rm -f _tmp/eval-live/*.md 2>/dev/null
-    # shellcheck disable=SC2086
-    python3 evals/evaluate.py --live --out "$OUT/$dir" $extra
-    echo "（评测器退出码 $?；B 变体预期非 0，因为它就是故意写坏的）"
+    ls -d "$OUT/$dir"/cases-* 2>/dev/null | sed 's/^/  历史快照: /'
+    return 0
   fi
-  # 现场生成的用例快照：_tmp 会被下次运行覆盖，复制到报告目录留档
-  if [ -z "$(ls -A "$OUT/$dir/cases" 2>/dev/null)" ]; then
-    cp _tmp/eval-live/*.md "$OUT/$dir/cases/" 2>/dev/null
+  echo "→ 现场生成 3 条正样本用例 + 12 条 Judge 打分，约 2-5 分钟，期间无输出属正常"
+  rm -f _tmp/eval-live/*.md 2>/dev/null
+  # shellcheck disable=SC2086
+  python3 evals/evaluate.py --live --out "$OUT/$dir" $extra
+  echo "（评测器退出码 $?；B 变体预期非 0，因为它就是故意写坏的）"
+
+  # 现场生成的用例快照：_tmp 会被下次运行覆盖，按报告时分秒留档（每次运行一个目录，
+  # 历史快照不覆盖——它们是对应那次报告的证据，测试与文档会引用）
+  local stem snap
+  stem="$(basename "$(latest_json "$dir")" .json 2>/dev/null)"
+  if [ -z "$stem" ]; then
+    echo "⚠️ 变体 $dir 没产出报告 json，--live 可能失败了"
+    return 0
   fi
-  if [ -z "$(ls -A "$OUT/$dir/cases" 2>/dev/null)" ]; then
+  snap="$OUT/$dir/cases-${stem##*-}"
+  mkdir -p "$snap"
+  cp _tmp/eval-live/*.md "$snap/" 2>/dev/null
+  if [ -z "$(ls -A "$snap" 2>/dev/null)" ]; then
+    rmdir "$snap" 2>/dev/null
     echo "⚠️ 没拿到变体 $dir 的用例快照（_tmp/eval-live 为空），报告仍可用于对比"
   else
-    ls "$OUT/$dir/cases" | sed 's/^/  快照: /'
+    echo "  快照目录: $snap"
+    ls "$snap" | sed 's/^/    /'
   fi
 }
 

@@ -40,7 +40,7 @@ entries:
     confirmed_by: WL2O2O（2026-11-12）
     status: fixed
     fix_ref: evaluate.py judge() 评分标准修订（DIM_DEFS + 评审约定2）
-  # ↓ 2026-11-13 A/B prompt 回归演示（bash evals/ab-demo.sh）暴露的两条，均为 AI 起草、待人工确认
+  # ↓ 2026-11-13 A/B prompt 回归演示（bash evals/ab-demo.sh）暴露的两条：AI 起草，已由 WL2O2O 确认
   - id: bc-0003
     case_id: tc-1000001-good（--live B 变体产出，非在册样本）
     date: 2026-11-13
@@ -52,13 +52,13 @@ entries:
       表格结构漂移把内容缺陷一起藏了起来。
     root_cause: evaluator
     suggested_by: AI 分析（A/B 演示对比 B 报告与 b/cases 真实产物时发现）
-    confirmed_by: null   # 待人工确认；确认后 status 置 fixed
-    status: open
+    confirmed_by: WL2O2O（2026-11-13）
+    status: fixed
     fix_ref: >-
-      已实现待确认：parse_case_tables_with_headers() 保留表头，is_standard_header() 判定列序，
+      parse_case_tables_with_headers() 保留表头，is_standard_header() 判定列序，
       非标准表头改为按列名兜底检查（rule_check）；自测 TestHeaderDriftFallback +
       TestAbDemoArtifacts（拿 B 的真实产物当锚点）；登记评测集与全仓扫描结果零变化
-      （--diff 旧新基线：退步 0 / 变好 0）。
+      （--diff 旧新基线：退步 0 / 变好 0）。提交 3dc9821。
   - id: bc-0004
     case_id: tc-1020256-executed（--live B 变体产出）
     date: 2026-11-13
@@ -70,9 +70,61 @@ entries:
       coverage 维度定义对"变更点是否真被逐条覆盖"约束不够。
     root_cause: evalset
     suggested_by: AI 分析（A/B 演示 A=5.0/5.0/5.0 vs B=4.8/4.5/5.0 对比）
-    confirmed_by: null   # 维度定义修订属评分标准变更：需人工确认 + 升评测集版本 + 重跑基线 + 重新校准
+    confirmed_by: WL2O2O（2026-11-13，"发现即治疗"，同意升级维度定义）
+    status: confirmed
+    fix_ref: >-
+      评分标准修订（2026-11-13）：DIM_DEFS coverage 改为"先逐变更点核对再打分 + 分数上限表"，
+      consistency 明确纳入输出契约（列结构/P0-P2/不得出现"同上"），新增评审约定 4
+      "格式退化不等于内容合格"；评测集 v3 → v4。
+      首轮验证（2026-11-13 export key 实跑：reports/baseline-2026-11-13-165241.*、
+      ab-demo/a/baseline-2026-11-13-170553.*、ab-demo/b/baseline-2026-11-13-170848.*）：
+      **未达验收标准**——B 变体 coverage
+      由 5/5/5 降到 3/3/4（方向对），但四维均分 4.50/4.50/4.75 仍全部 ≥4，且核对结论系虚构、
+      consistency 上限未被执行；遗留问题转 bc-0005，本条不标 fixed。
+  - id: bc-0005
+    case_id: tc-1000001-good（v4 Judge 复跑，正反两个方向都出错）
+    date: 2026-11-13
+    dimension: coverage / consistency（Judge 指令遵循）
+    phenomenon: >-
+      v4 收紧评分标准后复跑，裁判把"核对动作"演出来了但结论是编的：
+      ① B 变体产出实际覆盖 0 个变更点、无变更点说明，coverage 理由却写
+      "变更点1、2、3、4、5、6均覆盖"（只扣边界值，给 3 分）；
+      ② 正样本 tc-1000001-good 规则通道确认 ①②③ 全覆盖（fixture 只有 3 个变更点），
+      裁判却给 4 分并写"②③无用例对应，仅覆盖 3/5"——凭空多出 2 个变更点；
+      ③ consistency 明写"违背契约任一项不高于 3"，B 三份都是 6 列非标准表格 +
+      优先级"高/中" + "执行TC1操作"式引用，裁判仍全给 5 分，理由还断言"优先级使用 P0/P1/P2"。
+      即小模型裁判无法可靠执行"自己拆清单再逐点核对"这类多步指令，分数上限也压不住。
+    root_cause: model
+    suggested_by: AI 分析（v4 三份带 Judge 报告的理由逐条比对规则通道结果）
+    confirmed_by: WL2O2O（2026-11-13，认可归因"小模型指令遵循不足"，选定 (a)+(b) 组合治疗，从评测集侧兜住）
+    status: confirmed
+    fix_ref: >-
+      评测集 v4 → v5（2026-11-13）：机械事实不再让裁判自己算——
+      (a) cases.yaml 新增 `change_points` 段（按 fixture 给 ground-truth 变更点清单，编号由 pytest 锁定
+      必须与 expected_change_points 一致），build_judge_prompt() 注入【变更点清单】，明令"不要自己另拆"；
+      同时注入【规则通道已检出的确定性违规】并写明"不得推翻、不得重算、不得视而不见"；
+      (b) coverage 重定义为"覆盖充分性"：逐点覆盖归规则通道，裁判只评边界值/异常场景/状态分支/粒度，
+      分数上限随之放宽并要求 reason 落到具体缺口；consistency 改为语义一致性 + 契约违背时不得高于 3；
+      评审约定 4 改为"分工"、5 改为"规则通道有违规则 coverage/consistency 不得高于 3"、
+      6 新增"禁止编造清单里没有的变更点"；未登记清单时 prompt 显式说明"未登记"而不是留空。
+      验证待办（需 key，未跑不得声称已生效）：`python3 evals/evaluate.py`（v5 登记评测 Judge 基线）+
+      `FORCE=1 bash evals/ab-demo.sh`，验收标准「B 变体 Judge 均分 < 4 且理由不得与规则通道结论矛盾、
+      A 变体仍高分」；跑完抽样人工复批并追加 calibration.yaml。
+  - id: bc-0006
+    case_id: tc-1020256-executed（--live B 变体产出，v4 那轮）
+    date: 2026-11-13
+    dimension: no_jump_refs（规则通道覆盖面）
+    phenomenon: >-
+      B 变体产出里出现"执行TC1操作"这类跨用例引用（把前置条件/步骤寄托在另一条用例上），
+      现有 JUMP_RE 只匹配"见 xxx / 同上 / 见上文 / 参见"等写法，未检出；
+      该轮报告 no_jump_refs 合规率仍显示 100%。属规则通道的漏检面（不是误报）。
+    root_cause: evaluator
+    suggested_by: AI 分析（ab-demo/b/cases-170848/tc-1020256-executed.md 人工复读发现）
+    confirmed_by: null   # 人工确认必填，AI 建议不算数
     status: open
-    fix_ref: null
+    fix_ref: >-
+      修法待确认：JUMP_RE 增补"执行TC\d+/同上用例/参考用例\d+"等模式前先确认误报风险
+      （正常用例里可能合法出现"执行"字样），补合成用例 + 拿这份真实产物当锚点。
 # 示例（注释，非真实条目）：
 # - id: bc-0001
 #   case_id: tc-1000001-good
