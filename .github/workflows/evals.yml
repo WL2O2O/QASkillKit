@@ -1,6 +1,9 @@
 # 评测回归门禁：每次 push / PR 自动跑 评测器 pytest 自测 + 登记评测 + 全仓结构扫描（零 key，不依赖任何外部服务）。
 # 退出码 0 = 正样本全过且负向对照全部检出；非 0 亮红叉（配合 branch protection 可挡合并）。
 # Judge 通道不在 CI 跑（不在 CI 存 key）；本地 export key 即可启用，见 evals/README.md。
+# 同理 --judge-agreement 只离线重算已存档报告（零 key），而 --runs N 稳定性度量需要真实调用裁判，
+# 只能在本地带 key 跑，不进 CI。
+# 最后一步只是对已存档报告离线重算裁判-规则一致率（诊断，不拦合并）。
 name: evals
 
 on:
@@ -24,6 +27,10 @@ jobs:
         run: python3 evals/evaluate.py
       - name: Whole-repo structural scan (no key)
         run: python3 evals/evaluate.py --scan
+      - name: Judge reliability audit on archived reports (informational, no key)
+        run: |
+          ls evals/reports/baseline-*.json evals/ab-demo/*/baseline-*.json 2>/dev/null \
+            | xargs -r python3 evals/evaluate.py --judge-agreement
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4

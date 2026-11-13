@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """评测器自测（评测器也要被评测）
 
-覆盖五块，全部零 key、离线、秒级：
+覆盖九块，全部零 key、离线、秒级：
 1. 用例表解析（parse_case_tables）：表头识别 / 分隔行 / 空行终止 / 多表合并
 2. 规则边界（rule_check）：8 条规则各自的触发与不触发边界（含正则边界：
    admin\\d{3,}、内网 IP 段 172.16-31、跳转引用四种写法）
@@ -15,6 +15,10 @@
    Judge ±1 不判退步、扫描报告对比、类型不匹配拒绝、真实基线锚点
 7. 表头漂移兜底与 A/B 演示产物锚点：非标准表头按列名继续查内容（bc-0003 回归），
    evals/ab-demo/ 里 A 变体必须零违规、B 变体必须被检出
+8. 裁判-规则一致率（judge_agreement）：契约上限映射 / 矛盾与反向可疑判定 /
+   裁判未跑不进分母 / 报告小节渲染 / 真实存档报告锚点
+9. 裁判稳定性（--runs N）：极差 ≥2 记不稳定（±1 是已知抖动）/ pass@N 与结论翻转 /
+   单轮失败不补分、轮次不足如实写"无法测" / 渲染小节 / 不参与退出码 / --diff 只作说明
 
 运行：python3 -m pytest evals/tests -q
 """
@@ -461,7 +465,7 @@ class TestJudgeRubric:
         # 评分标准变了就得升版本（三件套：升版本 + 重跑基线 + 重新校准）
         assert jcfg is not None
         meta = yaml.safe_load((EVAL_DIR / "cases.yaml").read_text(encoding="utf-8"))["meta"]
-        assert meta["version"] >= 5
+        assert meta["version"] >= 6
 
     def test_coverage_defers_mechanical_check_to_rules(self):
         # v5：coverage 不再让裁判自己拆清单/数覆盖，只评场景充分性与粒度（bc-0005 治疗）
@@ -548,6 +552,70 @@ class TestJudgeRubric:
         assert e5["confirmed_by"] and e5["status"] in ("confirmed", "fixed")
         assert "v4 → v5" in e5["fix_ref"] and "待" in e5["fix_ref"]
 
+    def test_v6_verification_and_new_drafts_are_recorded(self):
+        # v6 实跑结果必须如实写回 bc-0007（达标数字 + 仍待人工确认），
+        # 新冒出的两类问题登记为 open 草稿：AI 只起草，confirmed_by 必须留空
+        bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
+        by_id = {x["id"]: x for x in bc["entries"]}
+        e7 = by_id["bc-0007"]
+        assert "233955" in e7["fix_ref"] and "5 → 2" in e7["fix_ref"]   # 实测证据落盘
+        assert e7["status"] == "open" and e7["confirmed_by"] is None     # 人工没确认就不许标 fixed
+        for bid, case, dim in (("bc-0008", "tc-neg-format", "consistency"),
+                               ("bc-0009", "tc-neg-priority", "hallucination")):
+            e = by_id[bid]
+            assert e["status"] == "open" and e["confirmed_by"] is None
+            assert e["root_cause"] in ("evalset", "model", "prompt")
+            assert case in e["case_id"] and dim in e["dimension"]
+            assert "待确认" in e["fix_ref"] and "验收标准" in e["fix_ref"]
+        # bc-0009 是 v6 收紧后的过度纠正：修法不得把 bc-0007 治好的又放回去
+        assert "仍 ≤2" in by_id["bc-0009"]["fix_ref"]
+        # v6 治疗（bc-0007：hallucination 定义与 CONTRACT_CAPS 未对齐）必须先有登记条目
+        e7 = next(x for x in bc["entries"] if x["id"] == "bc-0007")
+        assert e7["root_cause"] == "evalset" and e7["dimension"].startswith("hallucination")
+        assert "v5 → v6" in e7["fix_ref"]
+        assert e7["status"] == "open" and e7["confirmed_by"] is None  # 根因未人工确认前不得标 confirmed
+
+
+    def test_hallucination_binds_to_rule_channel(self):
+        # v6：hallucination 必须以规则通道的 no_secrets 结论为准（bc-0007 治疗）
+        d = evaluate.DIM_DEFS["hallucination"]
+        assert "no_secrets" in d and "不得高于 2" in d
+        assert "未虚构" in d and "不合格理由" in d   # 明文禁止 v5 那种"未虚构"却给 5 分的理由
+        for score in ("5=", "4=", "3=", "2=", "1="):
+            assert score in d, "hallucination 缺 %s 档定义" % score
+        assert "reason 必须落到具体行" in d
+
+    def test_hallucination_placeholder_exception_is_narrow(self):
+        # v5 的宽例外（"标注为示例/占位的测试账号不算虚构"）正是裁判放过虚构凭证的口子
+        d = evaluate.DIM_DEFS["hallucination"]
+        assert "例外只有一种" in d and "占位标记" in d
+        assert "不算标注" in d and "一律按虚构计" in d
+        assert "测试账号" in d   # 必须点名这种写法
+
+    def test_convention_caps_hallucination_when_secrets_found(self, jcfg):
+        p = evaluate.build_judge_prompt(
+            "需求原文X", "用例产出Y", jcfg, points=["① a"],
+            rule_findings=["tc-neg-secrets / no_secrets：行1 前置条件含虚构凭证/内网地址"])
+        assert "hallucination 不得给 3 分以上" in p
+        assert "coverage 与 consistency 均不得给 4 分以上" in p
+
+    def test_every_contract_cap_is_stated_in_the_prompt(self, jcfg):
+        # 一致率指标拿上限卡裁判，前提是这个上限在 prompt 里明文说过——否则是拿没说过的规矩扣分
+        p = evaluate.build_judge_prompt(
+            "需求原文X", "用例产出Y", jcfg, points=["① a"],
+            rule_findings=["tc / no_secrets：行1 前置条件含虚构凭证/内网地址",
+                           "tc / coverage：变更点②未被任何用例覆盖"])
+        stated = {
+            ("coverage", 3): ["coverage 与 consistency 均不得给 4 分以上", "不高于 3"],
+            ("consistency", 3): ["不高于 3", "coverage 与 consistency 均不得给 4 分以上"],
+            ("hallucination", 2): ["hallucination 不得给 3 分以上", "不得高于 2"],
+        }
+        for (dim, cap), phrases in stated.items():
+            assert any(x in p for x in phrases), "prompt 没写明 %s ≤%d 的上限" % (dim, cap)
+        for rule, caps in evaluate.CONTRACT_CAPS.items():
+            for dim, cap in caps:
+                assert (dim, cap) in stated, "CONTRACT_CAPS 里 %s→%s≤%d 没有对应的 prompt 明文" % (
+                    rule, dim, cap)
 
 class TestExtractJson:
     def test_plain(self):
@@ -613,9 +681,12 @@ def judge_scores(**over):
 
 
 def base_case(cid="tc-1", kind="positive", verdict="pass", violations=None, judge=None,
-              judge_note=""):
-    return {"id": cid, "kind": kind, "verdict": verdict,
-            "violations": violations or {}, "judge": judge, "judge_note": judge_note}
+              judge_note="", rule_pass=None):
+    c = {"id": cid, "kind": kind, "verdict": verdict,
+         "violations": violations or {}, "judge": judge, "judge_note": judge_note}
+    if rule_pass is not None:
+        c["rule_pass"] = rule_pass
+    return c
 
 
 def base_report(cases=None, version=2, mode="offline+rules-only", date="2026-11-12", **agg):
@@ -733,3 +804,446 @@ class TestDiffReports:
         lines, reg, imp = evaluate.diff_reports(old, new)
         assert reg == [], "真实基线对比出现退步: %s" % reg
         assert any("评测集版本不同" in x for x in lines)  # v1 → v2 必须给出警告
+
+
+# ---------- 9. 裁判-规则一致率（judge_agreement / --judge-agreement） ----------
+
+# 真实锚点：已存档的不可变产物。v4 B 变体（170848）矛盾率必须一直是 15/28；
+# v5 B 臂（221550）喂了清单+规则结论后掉到 1/28；v6（233955）治好了 bc-0007 但换了个维度冒头。
+V4_B_REPORT = "ab-demo/b/baseline-2026-11-13-170848.json"
+V5_B_REPORT = "ab-demo/b/baseline-2026-11-13-221550.json"
+V6_REPORT = "reports/baseline-2026-11-13-233955.json"
+V6_RUNS3_REPORT = "reports/baseline-2026-11-14-001756.json"   # v6 + --runs 3 真实稳定性产物
+
+
+class TestJudgeAgreement:
+    def test_contract_caps_map_every_rule_to_a_dimension(self):
+        # 每条规则都得有契约上限映射；漏一条 = 裁判可以在那个维度上"看不见"规则抓到的问题
+        for rule in evaluate.RULES:
+            assert rule in evaluate.CONTRACT_CAPS, "规则 %s 没有契约上限映射" % rule
+        for rule, caps in evaluate.CONTRACT_CAPS.items():
+            assert rule in evaluate.RULES, "映射里有未登记的规则 %s" % rule
+            for dim, cap in caps:
+                assert dim in DIMS and 1 <= cap <= 5
+
+    def test_contract_caps_follow_v5_rubric(self):
+        # v5 约定的三条硬上限：契约类违规压 consistency、覆盖类压 coverage、虚构凭证压 hallucination
+        caps = evaluate.CONTRACT_CAPS
+        for rule in ("format_columns", "priority_valid", "traceability",
+                     "no_jump_refs", "expected_non_empty"):
+            assert caps[rule] == [("consistency", 3)]
+        for rule in ("change_section", "coverage"):
+            assert caps[rule] == [("coverage", 3)]
+        assert caps["no_secrets"] == [("hallucination", 2)]
+
+    def test_judge_above_cap_is_contradiction(self):
+        c = base_case(cid="tc-neg-priority", verdict="fail",
+                      violations={"priority_valid": ["行2 优先级'P5'非法"]},
+                      judge=judge_scores(consistency=5), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert (agg["checkable"], agg["contradictions"]) == (1, 1)
+        assert agg["contradiction_rate"] == 1.0
+        it = agg["items"][0]
+        assert it["case"] == "tc-neg-priority" and it["dimension"] == "consistency"
+        assert it["score"] == 5 and it["cap"] == 3
+        assert "P5" in it["evidence"] and it["reason"]
+
+    def test_judge_at_cap_is_not_contradiction(self):
+        # 上限是"不得高于 3"，给 3 分本身不算矛盾（否则指标会把合规裁判也判成矛盾）
+        c = base_case(verdict="fail", violations={"priority_valid": ["行2 优先级'P5'非法"]},
+                      judge=judge_scores(consistency=3), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert agg["checkable"] == 1 and agg["contradictions"] == 0
+        assert agg["contradiction_rate"] == 0.0 and agg["items"] == []
+
+    def test_unmapped_dimensions_are_not_counted(self):
+        # 规则只压它映射的维度：coverage 违规时 relevance 给满分不算矛盾、也不进分母
+        c = base_case(verdict="fail", violations={"coverage": ["变更点②未被任何用例覆盖"]},
+                      judge=judge_scores(coverage=3, relevance=5), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert agg["checkable"] == 1          # 只数 coverage 这一个映射维度
+        assert agg["contradictions"] == 0 and agg["contradiction_rate"] == 0.0
+        assert agg["items"] == []
+
+    def test_clean_case_has_nothing_to_check(self):
+        agg = evaluate.judge_agreement([base_case(judge=judge_scores(), rule_pass=True)])
+        assert agg["checkable"] == 0 and agg["contradictions"] == 0
+        assert agg["contradiction_rate"] is None and agg["strict_flags"] == []
+
+    def test_judge_not_run_goes_to_uncheckable_not_denominator(self):
+        # 无 key 时不能拿缺数据凑指标：违规用例计入 uncheckable，分母保持 0
+        c = base_case(verdict="fail", violations={"traceability": ["表头缺少关联引用列"]},
+                      judge=None, judge_note="skipped（无 API key，仅规则通道）", rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert agg["checkable"] == 0 and agg["contradiction_rate"] is None
+        assert len(agg["uncheckable"]) == 1
+        assert "traceability" in agg["uncheckable"][0] and "无法核对" in agg["uncheckable"][0]
+
+    def test_clean_case_without_judge_is_not_uncheckable(self):
+        agg = evaluate.judge_agreement([base_case(judge=None, rule_pass=True)])
+        assert agg["uncheckable"] == []  # 没违规就没东西要核对，不该刷"无法核对"
+
+    def test_strict_flag_when_rules_clean_but_judge_scores_low(self):
+        # 反向可疑：规则 8 项全过、裁判却给 ≤2 分 → 可能误判，要人工复批
+        c = base_case(judge=judge_scores(coverage=2), rule_pass=True)
+        agg = evaluate.judge_agreement([c])
+        assert agg["contradictions"] == 0 and len(agg["strict_flags"]) == 1
+        assert "coverage=2" in agg["strict_flags"][0] and "人工复批" not in agg["strict_flags"][0]
+
+    def test_no_strict_flag_when_rules_already_failed(self):
+        c = base_case(verdict="fail", violations={"coverage": ["变更点①未被任何用例覆盖"]},
+                      judge=judge_scores(coverage=2), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert agg["strict_flags"] == []      # 规则和裁判同向，不是可疑
+        assert agg["contradictions"] == 0     # 2 分低于上限，也不是矛盾
+
+    def test_strict_flag_when_low_score_has_no_matching_rule_evidence(self):
+        # 反向可疑的第二种情形（v6 实测补的盲区）：规则通道确实有违规，但违规的是别的维度，
+        # 裁判却在"没有证据"的维度上压分 —— 老实现只看 rule_pass，这种就漏了
+        c = base_case(cid="tc-neg-priority", verdict="fail",
+                      violations={"priority_valid": ["行2 优先级'P5'非法"]},
+                      judge=judge_scores(hallucination=1, consistency=3), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert agg["contradictions"] == 0
+        assert len(agg["strict_flags"]) == 1
+        assert "hallucination=1" in agg["strict_flags"][0]
+        assert "没检出 no_secrets 类违规" in agg["strict_flags"][0]
+
+    def test_low_score_backed_by_a_fired_rule_is_not_suspicious(self):
+        # 同样有别的维度违规，但压低分的维度本身有规则证据（no_secrets 命中）→ 不算可疑
+        c = base_case(verdict="fail",
+                      violations={"priority_valid": ["行2 优先级'P5'非法"],
+                                  "no_secrets": ["行1 前置条件含虚构凭证/内网地址"]},
+                      judge=judge_scores(hallucination=2, consistency=3), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        assert agg["strict_flags"] == []
+
+    def test_dim_rules_is_the_inverse_index_of_contract_caps(self):
+        for rule, caps in evaluate.CONTRACT_CAPS.items():
+            for dim, _cap in caps:
+                assert rule in evaluate.DIM_RULES[dim], "%s 没进 %s 的反查表" % (rule, dim)
+        assert set(evaluate.DIM_RULES) <= set(DIMS)
+
+    def test_render_agreement_full_section(self):
+        c = base_case(cid="tc-neg-secrets", verdict="fail",
+                      violations={"no_secrets": ["行1 前置条件含虚构凭证/内网地址"]},
+                      judge=judge_scores(hallucination=5), rule_pass=False)
+        agg = evaluate.judge_agreement([c])
+        text = "\n".join(evaluate.render_agreement(agg))
+        assert "## 裁判-规则一致性" in text
+        assert "可核对 1 项" in text and "矛盾 1 项" in text and "矛盾率 100%" in text
+        assert "| case | 维度 | 裁判分 | 上限 |" in text
+        assert "hallucination" in text and "≤2" in text
+        assert "门禁只认规则通道" in text
+
+    def test_render_agreement_zero_denominator_is_honest(self):
+        agg = evaluate.judge_agreement([base_case(
+            verdict="fail", violations={"coverage": ["变更点③未被任何用例覆盖"]},
+            judge=None, judge_note="error: 502", rule_pass=False)])
+        text = "\n".join(evaluate.render_agreement(agg))
+        assert "矛盾率 —" in text and "无法核对 1 项" in text
+        assert "100%" not in text and "0%" not in text  # 不许把缺数据画成 0 矛盾
+
+    def test_render_agreement_without_anything_checkable(self):
+        text = "\n".join(evaluate.render_agreement(
+            evaluate.judge_agreement([base_case(judge=judge_scores(), rule_pass=True)])))
+        assert "本次无可核对项" in text
+
+    def test_agreement_report_offline_recompute(self, tmp_path):
+        rep = base_report([base_case(cid="tc-neg-priority", verdict="fail",
+                                     violations={"priority_valid": ["行2 优先级'P5'非法"]},
+                                     judge=judge_scores(consistency=5), rule_pass=False)],
+                          version=4, mode="offline+judge")
+        f = tmp_path / "baseline-x.json"
+        f.write_text(json.dumps(rep, ensure_ascii=False), encoding="utf-8")
+        text = "\n".join(evaluate.agreement_report([f]))
+        assert "# 裁判-规则一致性核对" in text and "baseline-x.json" in text
+        assert "| v4 | offline+judge | 1 | 1 | 100% |" in text
+        assert "不等于 judge-人工一致率" in text
+
+    def test_agreement_report_rejects_scan_report(self, tmp_path):
+        f = tmp_path / "scan-x.json"
+        f.write_text(json.dumps(scan_report(), ensure_ascii=False), encoding="utf-8")
+        with pytest.raises(ValueError) as e:
+            evaluate.agreement_report([f])
+        assert "扫描报告" in str(e.value)
+
+    def test_real_v4_b_report_is_measured_contradictory(self):
+        # 真实锚点：v4 那次 B 变体复跑（裁判声称"列结构完整统一、优先级使用 P0/P1/P2"）
+        # 必须被本指标判为矛盾，否则说明指标松了、抓不到 bc-0005 那类放过
+        rep = json.loads((EVAL_DIR / V4_B_REPORT).read_text(encoding="utf-8"))
+        agg = evaluate.judge_agreement(rep["cases"])
+        assert agg["checkable"] == 28 and agg["contradictions"] == 15
+        assert abs(agg["contradiction_rate"] - 15 / 28) < 1e-9
+        pairs = {(i["case"], i["dimension"]) for i in agg["items"]}
+        assert ("tc-neg-secrets", "hallucination") in pairs   # "无虚构" vs 规则检出虚构凭证
+        assert ("tc-1000001-good", "consistency") in pairs     # "列结构完整" vs 表头漂移
+
+    def test_real_v5_and_v6_reports_show_the_fix_landed(self):
+        # 真实锚点：v5 把清单+规则结论喂给裁判后矛盾从 15/28 → 1/28（B 臂），
+        # v6 收紧 hallucination 定义后 bc-0007 那条（tc-neg-secrets）消失，
+        # 换成了 tc-neg-format 用"这是格式问题不是内容不一致"绕过上限（→ bc-0008 候选）
+        v5 = evaluate.judge_agreement(json.loads(
+            (EVAL_DIR / V5_B_REPORT).read_text(encoding="utf-8"))["cases"])
+        assert (v5["checkable"], v5["contradictions"]) == (28, 1)
+        assert {i["case"] for i in v5["items"]} == {"tc-neg-secrets"}
+
+        v6 = evaluate.judge_agreement(json.loads(
+            (EVAL_DIR / V6_REPORT).read_text(encoding="utf-8"))["cases"])
+        assert (v6["checkable"], v6["contradictions"]) == (14, 1)
+        assert {i["case"] for i in v6["items"]} == {"tc-neg-format"}
+        assert "tc-neg-secrets" not in {i["case"] for i in v6["items"]}   # bc-0007 已治好
+
+    def test_real_v6_report_flags_the_placeholder_false_positives(self):
+        # v6 的过度纠正：fixture 里只有"账号 A"这类抽象占位，裁判却判"虚构了账号 A 和密码"给 1/2 分。
+        # 这两条必须被反向可疑抓到，否则说明指标盲区没补上（补之前 strict_flags 是 0）
+        agg = evaluate.judge_agreement(json.loads(
+            (EVAL_DIR / V6_REPORT).read_text(encoding="utf-8"))["cases"])
+        assert len(agg["strict_flags"]) == 2
+        assert any("tc-neg-priority" in s and "hallucination=1" in s for s in agg["strict_flags"])
+        assert any("tc-neg-traceability" in s and "hallucination=2" in s for s in agg["strict_flags"])
+        assert all("账号 A" in s or "虚构" in s for s in agg["strict_flags"])  # 理由必须带上原文证据
+
+    def test_real_archived_reports_are_all_recomputable(self):
+        # 十一份带裁判的存档报告（v2/v3/v4/v5/v6）都要能离线重算，且矛盾都 > 0
+        paths = [EVAL_DIR / "reports" / "baseline-2026-11-12.json",
+                 EVAL_DIR / "reports" / "baseline-2026-11-13-165241.json",
+                 EVAL_DIR / "ab-demo" / "a" / "baseline-2026-11-13-092720.json",
+                 EVAL_DIR / "ab-demo" / "b" / "baseline-2026-11-13-093523.json",
+                 EVAL_DIR / "ab-demo" / "a" / "baseline-2026-11-13-170553.json",
+                 EVAL_DIR / V4_B_REPORT,
+                 EVAL_DIR / "reports" / "baseline-2026-11-13-220749.json",
+                 EVAL_DIR / "ab-demo" / "a" / "baseline-2026-11-13-221318.json",
+                 EVAL_DIR / V5_B_REPORT,
+                 EVAL_DIR / V6_REPORT,
+                 EVAL_DIR / V6_RUNS3_REPORT]
+        text = "\n".join(evaluate.agreement_report(paths))
+        for p in paths:
+            assert p.name in text
+        for rep_path in paths:
+            agg = evaluate.judge_agreement(
+                json.loads(rep_path.read_text(encoding="utf-8"))["cases"])
+            assert agg["contradictions"] > 0, "%s 竟然零矛盾，指标可能失效" % rep_path.name
+        assert "矛盾率 —" not in text  # 十一份都跑了裁判，不该出现"无法核对"占位
+
+    def test_main_embeds_agreement_in_report(self):
+        # 防回归：主流程必须算一致性、写进 JSON、并在裁判跑过时渲染小节
+        src = inspect.getsource(evaluate.main)
+        assert "judge_agreement(results)" in src
+        assert '"judge_agreement": agreement' in src
+        assert "render_agreement(agreement)" in src
+        assert 'if any(r["judge"] for r in results):' in src  # 裁判没跑就不硬塞这一节
+
+    def test_cli_exposes_judge_agreement_flag(self):
+        src = inspect.getsource(evaluate.main)
+        assert '"--judge-agreement"' in src and "agreement_report(paths)" in src
+
+
+# ---------- 10. 裁判稳定性（--runs N / judge_stability） ----------
+
+class TestJudgeStability:
+    """锁住重复评的口径：只诊断裁判、极差 ≥2 才算不稳定、缺轮次不编数字、不影响退出码。"""
+
+    def test_spread_alert_is_two_because_one_is_known_noise(self):
+        # ±1 是 calibration.yaml 里记过的运行间抖动，若阈值定 1 会把正常抖动全报成不稳定
+        assert evaluate.JUDGE_SPREAD_ALERT == 2
+        assert evaluate.JUDGE_NOISE == 1
+
+    def test_stable_runs_are_not_flagged(self):
+        runs = [judge_scores(coverage=5), judge_scores(coverage=4), judge_scores(coverage=5)]
+        st = evaluate.case_stability(runs, list(DIMS), 4)
+        assert (st["runs_requested"], st["runs_scored"], st["runs_failed"]) == (3, 3, 0)
+        assert st["unstable"] == [] and st["flipped"] is False
+        cov = st["dimensions"]["coverage"]
+        assert (cov["min"], cov["max"], cov["spread"]) == (4, 5, 1)
+        assert cov["values"] == [5, 4, 5] and cov["mean"] == 4.67
+        assert st["pass_at_n"] == "3/3" and st["spread_max"] == 1
+
+    def test_spread_of_two_is_unstable_and_lists_the_values(self):
+        runs = [judge_scores(coverage=5), judge_scores(coverage=3)]
+        st = evaluate.case_stability(runs, list(DIMS), 4)
+        assert st["spread_max"] == 2 and len(st["unstable"]) == 1
+        assert "coverage 极差 2" in st["unstable"][0] and "5→3" in st["unstable"][0]
+
+    def test_unstable_dimension_that_stays_above_threshold_is_not_a_flip(self):
+        # 极差大但每轮都过线：算不稳定，不算结论翻转（两件事分开报，别混成一个数）
+        runs = [judge_scores(coverage=5), judge_scores(coverage=3), judge_scores(coverage=4)]
+        st = evaluate.case_stability(runs, list(DIMS), 3)
+        assert len(st["unstable"]) == 1 and st["flipped"] is False
+        assert st["pass_at_n"] == "3/3"
+
+    def test_verdict_flip_is_detected(self):
+        # 同一份产出重复评忽过忽不过：这是"单跑不可采信"的直接证据
+        runs = [judge_scores(coverage=5, relevance=5, consistency=5, hallucination=5),
+                judge_scores(coverage=2, relevance=3, consistency=3, hallucination=3)]
+        st = evaluate.case_stability(runs, list(DIMS), 4)
+        assert st["flipped"] is True and st["pass_at_n"] == "1/2"
+        assert st["means"] == [5.0, 2.75]
+
+    def test_failed_run_is_counted_but_never_scored(self):
+        # 单轮调用失败：记失败轮次、不进任何统计，也绝不补一个分数进去
+        runs = [judge_scores(), None, judge_scores(coverage=4)]
+        st = evaluate.case_stability(runs, list(DIMS), 4)
+        assert (st["runs_scored"], st["runs_failed"]) == (2, 1)
+        assert st["dimensions"]["coverage"]["values"] == [5, 4]
+        assert st["pass_at_n"] == "2/2"
+
+    def test_all_runs_failed_leaves_nothing_to_measure(self):
+        st = evaluate.case_stability([None, None], list(DIMS), 4)
+        assert st["runs_scored"] == 0 and st["dimensions"] == {}
+        assert st["means"] == [] and st["pass_at_n"] is None and st["flipped"] is None
+
+    def test_incomplete_dimension_run_is_skipped_not_averaged(self):
+        # 某轮缺维度：不进均分（不猜缺的那维），但该轮的其它维度值仍参与极差
+        partial = {"coverage": {"score": 1, "reason": "r"}}
+        st = evaluate.case_stability([judge_scores(coverage=5), partial], list(DIMS), 4)
+        assert st["dimensions"]["coverage"]["values"] == [5, 1]
+        assert st["means"] == [5.0] and st["pass_at_n"] == "1/1"
+
+    def test_single_run_cannot_measure_stability(self):
+        c = dict(base_case(judge=judge_scores()), judge_runs=[judge_scores()])
+        agg = evaluate.judge_stability([c], list(DIMS), 4)
+        assert agg["measured"] == [] and len(agg["insufficient"]) == 1
+        assert "不足 2 轮" in agg["insufficient"][0] and agg["reason"]
+
+    def test_no_judge_runs_says_not_run_instead_of_stable(self):
+        agg = evaluate.judge_stability([base_case(judge=None)], list(DIMS), 4)
+        assert agg["runs"] == 0 and agg["measured"] == []
+        assert "裁判未跑" in agg["reason"] and "稳定" not in agg["reason"]
+
+    def test_aggregate_collects_unstable_flipped_and_insufficient(self):
+        cases = [
+            dict(base_case(cid="tc-a", judge=judge_scores()),
+                 judge_runs=[judge_scores(coverage=5), judge_scores(coverage=3)]),
+            dict(base_case(cid="tc-b", judge=judge_scores()),
+                 judge_runs=[judge_scores(),
+                             judge_scores(coverage=2, relevance=3, consistency=3, hallucination=3)]),
+            dict(base_case(cid="tc-c", judge=judge_scores()), judge_runs=[judge_scores()]),
+            base_case(cid="tc-d", judge=None),          # 裁判没跑：不进任何一栏
+        ]
+        agg = evaluate.judge_stability(cases, list(DIMS), 4)
+        assert agg["runs"] == 2 and agg["measured"] == ["tc-a", "tc-b"]
+        assert any(x.startswith("tc-a") for x in agg["unstable"])
+        assert any(x.startswith("tc-b") and "不可采信" in x for x in agg["flipped"])
+        assert any(x.startswith("tc-c") for x in agg["insufficient"])
+        assert all("tc-d" not in x for x in agg["unstable"] + agg["flipped"] + agg["insufficient"])
+        assert [row["id"] for row in agg["table"]] == ["tc-a", "tc-b"]   # JSON 可序列化（非元组）
+
+    def test_render_stability_section(self):
+        cases = [dict(base_case(cid="tc-a", judge=judge_scores()),
+                      judge_runs=[judge_scores(coverage=5), judge_scores(coverage=3)])]
+        text = "\n".join(evaluate.render_stability(
+            evaluate.judge_stability(cases, list(DIMS), 4)))
+        assert "## 裁判稳定性（同一产出重复评 2 轮）" in text
+        assert "| case | 通过轮次 | 各轮均分 | 最大极差 |" in text
+        assert "coverage 3~5" in text and "2/2" in text
+        assert "不稳定明细" in text and "coverage 极差 2" in text
+        assert "不参与退出码" in text
+
+    def test_render_stability_without_data_is_honest(self):
+        text = "\n".join(evaluate.render_stability(
+            evaluate.judge_stability([base_case(judge=None)], list(DIMS), 4)))
+        assert "未测：裁判未跑" in text
+        assert "0 条" not in text and "很稳定" not in text   # 不许把缺数据画成稳定
+
+    def test_judge_repeated_calls_n_times_and_keeps_order(self, monkeypatch):
+        calls = []
+
+        def fake_llm_chat(messages, model, base, key):
+            calls.append(len(calls) + 1)
+            return json.dumps({d: {"score": 5, "reason": "r%d" % len(calls)} for d in DIMS})
+
+        monkeypatch.setattr(evaluate, "llm_chat", fake_llm_chat)
+        cfg = {"dimensions": list(DIMS)}
+        runs, notes = evaluate.judge_repeated("需求X", "产出Y", cfg, "m", "http://b", "k", runs=3)
+        assert len(runs) == 3 and calls == [1, 2, 3]
+        assert notes == ["run1 ok", "run2 ok", "run3 ok"]
+        assert runs[0]["coverage"]["reason"] == "r1" and runs[2]["coverage"]["reason"] == "r3"
+
+    def test_judge_repeated_survives_a_mid_run_failure(self, monkeypatch):
+        # 第 2 轮炸了：不中断、不补分，第 1/3 轮照常返回，失败原因如实记下
+        n = {"i": 0}
+
+        def flaky(messages, model, base, key):
+            n["i"] += 1
+            if n["i"] == 2:
+                raise ValueError("502 bad gateway")
+            return json.dumps({d: {"score": 5, "reason": "r"} for d in DIMS})
+
+        monkeypatch.setattr(evaluate, "llm_chat", flaky)
+        runs, notes = evaluate.judge_repeated("需求X", "产出Y", {"dimensions": list(DIMS)},
+                                              "m", "http://b", "k", runs=3)
+        assert [r is None for r in runs] == [False, True, False]
+        assert "run2 error" in notes[1] and "502" in notes[1]
+
+    def test_runs_below_one_is_rejected_by_cli(self):
+        src = inspect.getsource(evaluate.main)
+        assert '"--runs"' in src and "args.runs < 1" in src
+
+    def test_main_wires_stability_without_touching_exit_code(self):
+        # 稳定性必须进报告，但绝不能参与门禁判定（exit_ok 只由 verdict 与判别力决定）
+        src = inspect.getsource(evaluate.main)
+        assert "judge_repeated(" in src and "case_stability(judge_runs" in src
+        assert "judge_stability(results" in src and '"judge_stability": stability' in src
+        assert "render_stability(stability)" in src
+        assert 'if args.runs > 1:' in src                 # 默认 1 轮时不塞这一节
+        exit_line = [ln for ln in src.splitlines() if "exit_ok = all(" in ln][0]
+        assert "stability" not in exit_line
+
+    def test_first_successful_run_is_the_reported_judge_score(self):
+        # 历史报告可比性：Judge 列必须是第 1 轮成功的分数，不是均值（均值另在稳定性小节）
+        src = inspect.getsource(evaluate.main)
+        assert "next((r for r in judge_runs if isinstance(r, dict)), None)" in src
+        assert "取第 %d/%d 轮" in src
+
+    def test_diff_reports_stability_change_as_note_only(self):
+        old = base_report([base_case(judge=judge_scores())])
+        new = base_report([base_case(judge=judge_scores())])
+        old["judge_stability"] = {"runs": 3, "measured": ["tc-1"], "unstable": [], "flipped": []}
+        new["judge_stability"] = {"runs": 3, "measured": ["tc-1"],
+                                  "unstable": ["tc-1：coverage 极差 2"], "flipped": []}
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and imp == []                     # 稳定性变化不判退步
+        assert any("裁判稳定性" in ln and "不稳定 0 → 1 条" in ln for ln in lines)
+
+    def test_diff_ignores_stability_when_runs_differ(self):
+        old = base_report([base_case(judge=judge_scores())])
+        new = base_report([base_case(judge=judge_scores())])
+        old["judge_stability"] = {"runs": 2, "measured": ["tc-1"], "unstable": [], "flipped": []}
+        new["judge_stability"] = {"runs": 3, "measured": ["tc-1"],
+                                  "unstable": ["x"], "flipped": ["y"]}
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and not any("裁判稳定性" in ln for ln in lines)  # 轮次不同不可比
+
+    def test_archived_reports_without_stability_still_recompute(self):
+        # 老报告没有 judge_stability 字段：一致率离线重算与 --diff 都不能因此崩
+        rep = json.loads((EVAL_DIR / V6_REPORT).read_text(encoding="utf-8"))
+        assert "judge_stability" not in rep
+        agg = evaluate.judge_agreement(rep["cases"])
+        assert agg["checkable"] == 14
+        lines, reg, imp = evaluate.diff_reports(rep, rep)
+        assert reg == [] and imp == []
+
+    def test_real_runs3_report_is_recomputable_offline(self):
+        # 真实锚点：v6 那轮 --runs 3（12 条 × 3 轮）的存档产物，稳定性小结必须能离线重算出同样的结论
+        rep = json.loads((EVAL_DIR / V6_RUNS3_REPORT).read_text(encoding="utf-8"))
+        assert rep.get("judge_stability", {}).get("runs") == 3
+        st = evaluate.judge_stability(rep["cases"], list(DIMS),
+                                      rep["judge_stability"]["threshold"])
+        assert len(st["measured"]) == 12 and st["insufficient"] == []
+        assert st["unstable"] == ["tc-neg-expected-empty：hallucination 极差 4（1→1→5）"]
+        assert len(st["flipped"]) == 1 and "1/3" in st["flipped"][0]
+        by_id = {row["id"]: row["stability"] for row in st["table"]}
+        # 正样本稳：三条都 3/3 过线，极差 ≤1
+        for cid in ("tc-1000001-good", "tc-1000002-good", "tc-1020256-executed"):
+            assert by_id[cid]["pass_at_n"] == "3/3" and by_id[cid]["spread_max"] <= 1
+        # bc-0009 是"稳定地错"：三条负向对照的 hallucination 三轮全 1 分（极差 0）
+        for cid in ("tc-neg-priority", "tc-neg-traceability", "tc-neg-jump-refs"):
+            assert by_id[cid]["dimensions"]["hallucination"]["values"] == [1, 1, 1]
+        # bc-0008 的逃逸不稳定：consistency 有时 3（守上限）有时 4（绕过）
+        assert by_id["tc-neg-format"]["dimensions"]["consistency"]["spread"] == 1
+        assert 4 in by_id["tc-neg-format"]["dimensions"]["consistency"]["values"]
+        # 一致率用的是第 1 轮分数，与同轮稳定性可比
+        agg = evaluate.judge_agreement(rep["cases"])
+        assert (agg["checkable"], agg["contradictions"]) == (14, 1)
+        assert len(agg["strict_flags"]) == 4 and all("账号 A" in x for x in agg["strict_flags"])

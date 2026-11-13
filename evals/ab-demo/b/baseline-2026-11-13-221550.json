@@ -1,0 +1,581 @@
+{
+  "date": "2026-11-13",
+  "generated_at": "2026-11-13T22:15:50",
+  "mode": "live+judge",
+  "evalset_version": 5,
+  "key_source": "GLM_API_KEY",
+  "judge_model": "glm-4-flash",
+  "cases": [
+    {
+      "id": "tc-1000001-good",
+      "kind": "positive",
+      "output_src": "_tmp/eval-live/tc-1000001-good.md",
+      "violations": {
+        "format_columns": [
+          "表头非标准 9 列：序号|用例ID|优先级|前置条件|操作步骤|预期结果（共 6 列，已按列名兜底检查内容）",
+          "行1 列数6≠9",
+          "行2 列数6≠9",
+          "行3 列数6≠9",
+          "行4 列数6≠9",
+          "行5 列数6≠9"
+        ],
+        "traceability": [
+          "表头缺少关联引用列：用例无法追溯到变更点"
+        ],
+        "change_section": [
+          "缺少变更点说明"
+        ],
+        "coverage": [
+          "变更点①未被任何用例覆盖",
+          "变更点②未被任何用例覆盖",
+          "变更点③未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 5,
+        "covered": []
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 1,
+          "reason": "变更点①、②、③均未被任何用例覆盖，用例只包含连续输错密码的测试场景，缺少账号锁定、错误次数提示、锁定期间登录尝试等场景。"
+        },
+        "relevance": {
+          "score": 2,
+          "reason": "用例与需求中的功能点相关，但未完全覆盖所有功能点，特别是缺少账号锁定和错误次数提示的测试。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例自身前后一致，但存在格式问题，如列数不符合标准，且缺少关联引用列，导致用例无法追溯到变更点。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "fail"
+    },
+    {
+      "id": "tc-1000002-good",
+      "kind": "positive",
+      "output_src": "_tmp/eval-live/tc-1000002-good.md",
+      "violations": {
+        "format_columns": [
+          "表头非标准 9 列：序号|优先级|测试项|前置条件|操作步骤|预期结果（共 6 列，已按列名兜底检查内容）",
+          "行1 列数6≠9",
+          "行2 列数6≠9",
+          "行3 列数6≠9",
+          "行4 列数6≠9",
+          "行5 列数6≠9"
+        ],
+        "priority_valid": [
+          "行1 优先级'高'非法",
+          "行2 优先级'中'非法",
+          "行3 优先级'高'非法",
+          "行4 优先级'高'非法",
+          "行5 优先级'中'非法"
+        ],
+        "traceability": [
+          "表头缺少关联引用列：用例无法追溯到变更点"
+        ],
+        "change_section": [
+          "缺少变更点说明"
+        ],
+        "coverage": [
+          "变更点①未被任何用例覆盖",
+          "变更点②未被任何用例覆盖",
+          "变更点③未被任何用例覆盖",
+          "变更点④未被任何用例覆盖",
+          "变更点⑤未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 5,
+        "covered": []
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 2,
+          "reason": "变更点①、②、③、④、⑤均未被任何用例覆盖，用例粒度不足以指导执行，缺少边界值和异常场景。"
+        },
+        "relevance": {
+          "score": 3,
+          "reason": "用例与需求中的功能点相关，但未完全覆盖所有功能点，如变更点①、②、③、④、⑤未在用例中体现。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例自身前后一致，但存在格式问题，如列数不符合要求，优先级非法。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中未虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "fail"
+    },
+    {
+      "id": "tc-1020256-executed",
+      "kind": "positive",
+      "output_src": "_tmp/eval-live/tc-1020256-executed.md",
+      "violations": {
+        "format_columns": [
+          "表头非标准 9 列：序号|用例ID|优先级|测试项|前置条件|操作步骤|预期结果（共 7 列，已按列名兜底检查内容）",
+          "行1 列数7≠9",
+          "行2 列数7≠9",
+          "行3 列数7≠9",
+          "行4 列数7≠9",
+          "行5 列数7≠9"
+        ],
+        "priority_valid": [
+          "行1 优先级'高'非法",
+          "行2 优先级'中'非法",
+          "行3 优先级'中'非法",
+          "行4 优先级'中'非法",
+          "行5 优先级'中'非法"
+        ],
+        "traceability": [
+          "表头缺少关联引用列：用例无法追溯到变更点"
+        ],
+        "change_section": [
+          "缺少变更点说明"
+        ],
+        "coverage": [
+          "变更点①未被任何用例覆盖",
+          "变更点②未被任何用例覆盖",
+          "变更点③未被任何用例覆盖",
+          "变更点④未被任何用例覆盖",
+          "变更点⑤未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 5,
+        "covered": []
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 2,
+          "reason": "变更点①、②、③、④、⑤均未被任何用例覆盖，用例场景和粒度不足以指导执行"
+        },
+        "relevance": {
+          "score": 1,
+          "reason": "所有用例均未直接对应需求中的功能点或规则，与需求脱节"
+        },
+        "consistency": {
+          "score": 1,
+          "reason": "存在格式错误（列数不匹配、优先级非法）、缺少关联引用列、缺少变更点说明等，违反了用例的一致性要求"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "没有虚构需求中不存在的事实"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "fail"
+    },
+    {
+      "id": "tc-1000001-negative",
+      "kind": "negative-control",
+      "output_src": "fixtures/1000001-bad-output.md",
+      "violations": {
+        "format_columns": [
+          "行4 列数8≠9"
+        ],
+        "priority_valid": [
+          "行1 优先级'P5'非法"
+        ],
+        "no_jump_refs": [
+          "行2 前置条件含跳转引用"
+        ],
+        "expected_non_empty": [
+          "行3 预期结果为空"
+        ],
+        "no_secrets": [
+          "行5 前置条件含虚构凭证/内网地址"
+        ],
+        "coverage": [
+          "变更点③未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 5,
+        "covered": [
+          "①",
+          "②"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 2,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③未被任何用例覆盖。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "存在列数缺失、优先级非法、前置条件含跳转引用、预期结果为空、前置条件含虚构凭证等问题。"
+        },
+        "hallucination": {
+          "score": 1,
+          "reason": "存在虚构凭证和内网地址。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-format",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-format.md",
+      "violations": {
+        "format_columns": [
+          "行3 列数8≠9"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的边界值未覆盖。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间存在依赖关系，例如第3个用例依赖于前两个用例的结果。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-priority",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-priority.md",
+      "violations": {
+        "priority_valid": [
+          "行2 优先级'P5'非法"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和③的异常场景未覆盖，变更点②的边界值未覆盖"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间存在依赖关系，例如第1个用例成功后第2个用例才能执行"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-traceability",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-traceability.md",
+      "violations": {
+        "traceability": [
+          "行2 关联引用为空"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的异常场景未覆盖。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "变更点①和②的用例前置条件与操作步骤存在矛盾，预期结果与操作步骤对不上。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-jump-refs",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-jump-refs.md",
+      "violations": {
+        "no_jump_refs": [
+          "行3 操作步骤含跳转引用"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点②只写了成功路径，缺未开通租户的报错分支；变更点③缺少超时和并发场景。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "变更点③的操作步骤与预期结果不一致，操作步骤中未提及'X'的具体值，而预期结果中提到了。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-expected-empty",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-expected-empty.md",
+      "violations": {
+        "expected_non_empty": [
+          "行2 预期结果为空"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 2,
+          "reason": "变更点①和③的边界值和异常场景未覆盖，变更点②缺少异常场景。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如变更点②的前置条件与操作步骤不一致。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-secrets",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-secrets.md",
+      "violations": {
+        "no_secrets": [
+          "行1 前置条件含虚构凭证/内网地址"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的异常场景未覆盖。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例自身前后一致且可独立执行，但存在列结构、优先级取值、跳转引用等可机械判定的输出契约问题，由规则通道判定。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例未虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-change-section",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-change-section.md",
+      "violations": {
+        "change_section": [
+          "缺少变更点说明"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的异常场景未覆盖。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间存在依赖关系，例如用例①依赖于用例②和③的执行结果。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求中不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    },
+    {
+      "id": "tc-neg-coverage",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-coverage.md",
+      "violations": {
+        "coverage": [
+          "变更点③未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 2,
+        "covered": [
+          "①",
+          "②"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 2,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③未被任何用例覆盖"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例自身前后一致且可独立执行，但存在列结构、优先级取值、跳转引用等可机械判定的输出契约问题"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "没有虚构需求中不存在的事实"
+        }
+      },
+      "judge_note": "model=glm-4-flash",
+      "verdict": "detected"
+    }
+  ],
+  "judge_agreement": {
+    "checkable": 28,
+    "contradictions": 1,
+    "contradiction_rate": 0.03571428571428571,
+    "items": [
+      {
+        "case": "tc-neg-secrets",
+        "dimension": "hallucination",
+        "score": 5,
+        "cap": 2,
+        "rule": "no_secrets",
+        "evidence": "行1 前置条件含虚构凭证/内网地址",
+        "reason": "用例未虚构需求中不存在的事实。"
+      }
+    ],
+    "strict_flags": [],
+    "uncheckable": []
+  },
+  "aggregates": {
+    "rule_compliance": {
+      "format_columns": 0.0,
+      "priority_valid": 0.3333333333333333,
+      "traceability": 0.0,
+      "no_jump_refs": 1.0,
+      "expected_non_empty": 1.0,
+      "no_secrets": 1.0,
+      "change_section": 0.0,
+      "coverage": 0.0
+    },
+    "change_point_coverage": [
+      0,
+      13
+    ],
+    "discrimination_ok": true,
+    "exit_ok": false
+  }
+}

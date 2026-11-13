@@ -2,7 +2,8 @@
 # 公开入口：无需 TAPD/数据库，clone 即跑。路径相对 evals/ 目录。
 meta:
   name: testcase-generator-evalset
-  version: 5   # v5：裁判通道分工重划（bc-0005 治疗）——变更点清单由评测集给定并注入 judge prompt（新增 change_points 段）、规则通道检出的违规作为确定性事实注入（裁判不得推翻）、coverage 改评场景充分性与粒度（机械覆盖度归规则通道）、consistency 只评语义一致；规则通道与用例集本身未变，跨版本对比以规则通道为准
+  version: 6   # v6：hallucination 维度定义与 CONTRACT_CAPS 对齐（bc-0007 治疗）——明确"规则通道检出 no_secrets 则本维度不高于 2"、收紧"示例/占位"例外（写"测试账号"再跟具体账号名+明文密码不算标注）、补 5-1 分阶梯与 reason 举证要求；评审约定 5 增加 hallucination ≤2 上限。规则通道与用例集本身未变，跨版本对比以规则通道为准
+  # v5：裁判通道分工重划（bc-0005 治疗）——变更点清单由评测集给定并注入 judge prompt（新增 change_points 段）、规则通道检出的违规作为确定性事实注入（裁判不得推翻）、coverage 改评场景充分性与粒度（机械覆盖度归规则通道）、consistency 只评语义一致；规则通道与用例集本身未变，跨版本对比以规则通道为准
   # v4：Judge 评分标准收紧（coverage 改为逐变更点核对+分数上限、consistency 纳入输出契约、新增评审约定4/5），修 bc-0004；v4 首轮实跑验证未达标（裁判虚构核对结论），见 bc-0005
   # v3：评测集扩充至 12 条（3 正样本 + 9 负向对照，每规则一发单规则隔离弹）；v2 judge 标准修订见 bc-0001/0002；v1 原始报告见 reports/calibration-2026-11-12-before.*
   sut_prompt: prompts/testcase-generator.public.md

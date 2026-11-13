@@ -13,12 +13,19 @@
   python3 evals/evaluate.py --scan --scan-root DIR  # 扫自定义用例目录（可多次指定）
   python3 evals/evaluate.py --add 用例.md --fixture 需求.md --points ①②  # 一键登记自己的用例
   python3 evals/evaluate.py --diff 旧报告.json 新报告.json  # 回归对比：逐用例逐规则变好/变坏（零 key）
+  python3 evals/evaluate.py --judge-agreement 报告.json [报告.json ...]  # 裁判-规则一致率核对（零 key，离线重算已存档报告）
+  python3 evals/evaluate.py --runs 3       # 裁判稳定性：同一产出重复评 3 轮，看极差与结论翻转（需 key）
   python3 evals/evaluate.py --live --sut-prompt 变体.md    # A/B prompt 回归：换被测 prompt 现场生成（需 key）
   python3 evals/evaluate.py --out DIR       # 报告输出目录（默认 evals/reports）
 
 报告命名：<前缀>-<日期>-<时分秒>.{md,json}，同日重跑互不覆盖（Judge 基线不会被零 key 重跑顶掉）。
 --diff 退出码：0 = 无退步（可当回归门禁）；1 = 有退步。Judge 单维 ±1 视为运行间抖动不判退步
 （见 calibration.yaml），降幅 ≥2 才判退步。
+--judge-agreement 矛盾率：裁判给分高于「规则通道确定性结论所允许的上限」的比例（CONTRACT_CAPS）；
+它只体检裁判有没有自相矛盾，不等于 judge-人工一致率（那需抽样复批）。裁判未跑的用例计入 uncheckable，不进分母。
+--runs N 稳定性：同一产出重复评 N 轮，报告里给出 pass@N、各维度 min~max/极差、结论翻转；
+极差 ≥2 记不稳定（±1 是已知运行间抖动）。它只诊断裁判、**不参与退出码**，门禁仍只认规则通道；
+裁判没跑或成功轮次不足 2 时如实写「未测」，不拿缺数据冒充稳定。
 
 环境变量（key 只从环境读，不落盘）：
   EVAL_LLM_API_KEY / GLM_API_KEY / OPENAI_API_KEY   任一即可启用 Judge/live
@@ -86,7 +93,7 @@ DIM_DEFS = {
         "只要其中存在任一条契约违背（列数漂移、P3 或\"高/中/低\"、\"同上/见上文/参见\"、"
         "缺关联引用列），本维度不高于 3；没有契约违背时才按语义一致性给 4-5。"
     ),
-    "hallucination": "无幻觉程度：是否虚构需求中不存在的事实（功能、业务数据、凭证、内网地址）。5=完全无虚构，1=大量虚构；明确标注为示例/占位的测试账号不算虚构",
+    "hallucination": "无幻觉程度：是否虚构需求原文里不存在的事实。**先看【规则通道已检出的确定性违规】里有没有 no_secrets**：只要那里列出\"含虚构凭证/内网地址\"，本维度不得高于 2，且 reason 必须承认该行事实（写\"未虚构\"\"无幻觉\"即为不合格理由）。判定口径：需求原文没给出的账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名，被写进前置条件、操作步骤或预期结果，就算虚构。例外只有一种——值本身带明显占位标记（尖括号占位符、\"示例\"、\"待补充\"、\"XXX\"、\"脱敏\"）；**写\"测试账号\"再跟一个具体账号名 + 明文密码不算标注，一律按虚构计**（\"使用测试账号 adminNNN、密码: 明文\"正是 AI 编造凭证的典型特征）。分数上限：5=完全没有需求外的事实；4=仅 1 处未标注的可疑数据且不影响执行；3=2 处以上可疑数据，或编造了需求里没有的功能/字段/规则；2=规则通道已检出 no_secrets，或出现明确的虚构凭证/内网地址；1=大面积虚构、用例无法照做。reason 必须落到具体行与具体值（哪一行、哪个值、需求原文里没有）。",
 }
 
 
@@ -285,6 +292,14 @@ def _diff_baseline(old, new):
         (reg if ncc[0] < occ[0] else imp).append(
             "变更点覆盖：%d/%d → %d/%d" % (occ[0], occ[1], ncc[0], ncc[1]))
 
+    ost, nst = old.get("judge_stability") or {}, new.get("judge_stability") or {}
+    if ost.get("measured") and nst.get("measured") and ost.get("runs") == nst.get("runs"):
+        if len(nst["unstable"]) != len(ost["unstable"]) or len(nst["flipped"]) != len(ost["flipped"]):
+            notes.append("裁判稳定性（重复评 %d 轮）：不稳定 %d → %d 条、结论翻转 %d → %d 条"
+                         "（只诊断裁判本身，不判退步）"
+                         % (nst["runs"], len(ost["unstable"]), len(nst["unstable"]),
+                            len(ost["flipped"]), len(nst["flipped"])))
+
     olds = {c["id"]: c for c in old.get("cases", [])}
     news = {c["id"]: c for c in new.get("cases", [])}
     for cid in list(olds) + [c for c in news if c not in olds]:
@@ -411,7 +426,8 @@ def build_judge_prompt(fixture, output, cfg, points=None, rule_findings=None):
         "敏感信息）由规则通道判，其结论已在下方给出，你不得推翻、不得重算、不得视而不见；"
         "你只评机器判不了的事（场景充分性与粒度、相关性、前后一致、有无虚构）。\n"
         "5. 格式退化不等于内容合格：只要【规则通道已检出的确定性违规】非空，"
-        "coverage 与 consistency 均不得给 4 分以上。\n"
+        "coverage 与 consistency 均不得给 4 分以上；其中若列出 no_secrets（虚构凭证/内网地址），"
+        "hallucination 不得给 3 分以上。\n"
         "6. reason 必须落到具体证据（哪条用例、哪个变更点、缺什么场景），"
         "禁止写\"覆盖全面\"\"符合要求\"这类没有证据的结论；也禁止编造清单里没有的变更点。\n"
         "只输出 JSON，格式 {\"维度名\": {\"score\": 数字, \"reason\": \"一句话理由\"}}。\n\n"
@@ -428,6 +444,283 @@ def judge(fixture, output, cfg, model, base, key, points=None, rule_findings=Non
         if d not in scores or not isinstance(scores[d].get("score"), (int, float)):
             raise ValueError("judge 输出缺维度 %s" % d)
     return scores
+
+
+# 同一份产出重复评：任一维度极差 ≥2 记「不稳定」；±1 是已知抖动（见 calibration.yaml），不算问题
+JUDGE_SPREAD_ALERT = 2
+
+
+def judge_repeated(fixture, output, cfg, model, base, key,
+                   points=None, rule_findings=None, runs=1):
+    """对同一份产出连续调 runs 次裁判，返回 (每轮分数列表, 每轮说明列表)。
+
+    单轮失败不中断也不补分：那一轮记 None + 失败原因，稳定性只按成功的轮次算，
+    成功轮次不足 2 就如实写"无法测稳定性"（不拿 1 轮冒充稳定）。
+    """
+    scores, notes = [], []
+    for i in range(max(1, int(runs))):
+        try:
+            scores.append(judge(fixture, output, cfg, model, base, key, points, rule_findings))
+            notes.append("run%d ok" % (i + 1))
+        except Exception as e:
+            scores.append(None)
+            notes.append("run%d error: %s" % (i + 1, e))
+    return scores, notes
+
+
+def _dim_values(run, dims):
+    return [run[d]["score"] for d in dims
+            if isinstance(run.get(d), dict) and isinstance(run[d].get("score"), (int, float))]
+
+
+def case_stability(runs, dims, threshold):
+    """把一条用例的 N 轮裁判分数压成稳定性小结（runs 里允许有 None = 该轮调用失败）。
+
+    看三件事：① 每个维度的极差（≥JUDGE_SPREAD_ALERT 记不稳定）；② 各轮四维均分；
+    ③ 结论翻转——同一份产出有时过线有时不过线，说明这条的 Judge 结论单跑不可采信。
+    """
+    ok = [r for r in runs if isinstance(r, dict)]
+    st = {"runs_requested": len(runs), "runs_scored": len(ok),
+          "runs_failed": len(runs) - len(ok), "dimensions": {}, "means": [],
+          "pass_runs": 0, "spread_max": 0, "unstable": [], "flipped": None,
+          "pass_at_n": None}
+    if not ok:
+        return st
+    for d in dims:
+        vals = [r[d]["score"] for r in ok if isinstance(r.get(d), dict)
+                and isinstance(r[d].get("score"), (int, float))]
+        if not vals:
+            continue
+        spread = max(vals) - min(vals)
+        st["dimensions"][d] = {"values": vals, "mean": round(sum(vals) / float(len(vals)), 2),
+                               "min": min(vals), "max": max(vals), "spread": spread}
+        st["spread_max"] = max(st["spread_max"], spread)
+        if spread >= JUDGE_SPREAD_ALERT:
+            st["unstable"].append("%s 极差 %d（%s）"
+                                  % (d, spread, "→".join(str(v) for v in vals)))
+    for r in ok:
+        vals = _dim_values(r, dims)
+        if len(vals) != len(dims):
+            continue                      # 该轮维度不全，不进均分统计（不猜缺的那维）
+        mean = sum(vals) / float(len(vals))
+        st["means"].append(round(mean, 2))
+        if mean >= threshold:
+            st["pass_runs"] += 1
+    if st["means"]:
+        st["pass_at_n"] = "%d/%d" % (st["pass_runs"], len(st["means"]))
+        st["flipped"] = 0 < st["pass_runs"] < len(st["means"])
+    return st
+
+
+def judge_stability(results, dims, threshold):
+    """汇总所有用例的重复评结果。裁判没跑 / 只跑一轮 / 轮次不足都如实说明，不编稳定性数字。"""
+    runs_req = max([len(c.get("judge_runs") or []) for c in results] or [0])
+    measured, unstable, flipped, insufficient, table = [], [], [], [], []
+    for c in results:
+        runs = c.get("judge_runs") or []
+        if not runs:
+            continue
+        st = c.get("stability") or case_stability(runs, dims, threshold)
+        if st["runs_scored"] < 2:
+            insufficient.append("%s：成功 %d 轮%s，不足 2 轮无法测稳定性"
+                                % (c["id"], st["runs_scored"],
+                                   "（失败 %d 轮）" % st["runs_failed"] if st["runs_failed"] else ""))
+            continue
+        measured.append(c["id"])
+        table.append({"id": c["id"], "stability": st})
+        if st["unstable"]:
+            unstable.append("%s：%s" % (c["id"], "；".join(st["unstable"])))
+        if st["flipped"]:
+            flipped.append("%s：%s 轮过线（各轮均分 %s），单跑结论不可采信"
+                           % (c["id"], st["pass_at_n"],
+                              "/".join("%.2f" % m for m in st["means"])))
+    reason = None
+    if not measured:
+        reason = ("裁判未跑：无 key 或未启用 Judge" if runs_req == 0
+                  else "成功轮次不足 2：--runs 需 ≥2 且每轮裁判都要调用成功")
+    return {"runs": runs_req, "spread_alert": JUDGE_SPREAD_ALERT, "threshold": threshold,
+            "measured": measured, "table": table, "unstable": unstable,
+            "flipped": flipped, "insufficient": insufficient, "reason": reason}
+
+
+def render_stability(stab):
+    """稳定性小节（Markdown）。裁判没跑就只写"未测"，绝不把缺数据画成"很稳定"。"""
+    lines = ["## 裁判稳定性（同一产出重复评 %d 轮）" % max(stab["runs"], 1), ""]
+    if not stab["measured"]:
+        lines += ["- 未测：%s" % (stab["reason"] or "无可测数据"),
+                  "- 稳定性不参与退出码：门禁只认规则通道，Judge 分数一律当参考。", ""]
+        return lines
+    lines.append("- 测了 %d 条用例 · 不稳定 %d 条 · 结论翻转 %d 条 · 轮次不足 %d 条"
+                 % (len(stab["measured"]), len(stab["unstable"]),
+                    len(stab["flipped"]), len(stab["insufficient"])))
+    lines.append("- 判定口径：任一维度极差 ≥%d 记不稳定（±1 是已知运行间抖动）；"
+                 "各轮四维均分有过有不过记「结论翻转」" % stab["spread_alert"])
+    lines.append("")
+    lines.append("| case | 通过轮次 | 各轮均分 | 最大极差 | 维度分数（min~max） |")
+    lines.append("|:---|:---|:---|:---|:---|")
+    for row in stab["table"]:
+        cid, st = row["id"], row["stability"]
+        dims_txt = "；".join("%s %s~%s" % (d, v["min"], v["max"])
+                             for d, v in sorted(st["dimensions"].items()))
+        lines.append("| %s | %s | %s | %d | %s |"
+                     % (cid, st["pass_at_n"],
+                        "/".join("%.2f" % m for m in st["means"]),
+                        st["spread_max"], dims_txt))
+    if stab["unstable"]:
+        lines += ["", "**不稳定明细**（需人工复批，别拿单轮分数下结论）：", ""]
+        lines += ["- %s" % u for u in stab["unstable"]]
+    if stab["flipped"]:
+        lines += ["", "**结论翻转明细**（同一份产出重复评忽过忽不过）：", ""]
+        lines += ["- %s" % f for f in stab["flipped"]]
+    if stab["insufficient"]:
+        lines += ["", "**轮次不足**：", ""]
+        lines += ["- %s" % i for i in stab["insufficient"]]
+    lines += ["", "> 稳定性只诊断裁判本身，**不参与退出码**；门禁仍只认规则通道。", ""]
+    return lines
+
+
+CONTRACT_CAPS = {
+    "format_columns":     [("consistency", 3)],
+    "priority_valid":     [("consistency", 3)],
+    "traceability":       [("consistency", 3)],
+    "no_jump_refs":       [("consistency", 3)],
+    "expected_non_empty": [("consistency", 3)],
+    "change_section":     [("coverage", 3)],
+    "coverage":           [("coverage", 3)],
+    "no_secrets":         [("hallucination", 2)],
+}
+
+
+DIM_RULES = {}
+for _rule, _caps in CONTRACT_CAPS.items():
+    for _dim, _cap in _caps:
+        DIM_RULES.setdefault(_dim, []).append(_rule)
+
+
+def judge_agreement(cases):
+    """裁判分数 × 规则通道结论交叉核对，返回矛盾率与明细（纯函数，零 key 可测/可回溯旧报告）。
+
+    两个方向都查：
+      宽松矛盾 = 规则检出违规、裁判却给了高于上限的分（放过退步，bc-0004/bc-0005 那类）；
+      反向可疑 = 规则通道全干净、裁判却给某维度 ≤2 分（可能误判，需人工复批）。
+    裁判没跑（无 key）或调用失败的用例计入 uncheckable，不进分母——不拿缺数据凑指标。
+
+    计数单位是「规则违规 × 它映射的裁判维度」：一条用例同时违反 4 条契约类规则就贡献 4 个
+    可核对项（每个都要求 consistency 不高于 3）。所以分母随违规数增长，读数字时要知道这点。
+    """
+    items, uncheckable, strict = [], [], []
+    checkable = 0
+    for c in cases:
+        j = c.get("judge")
+        violated = [r for r in CONTRACT_CAPS if (c.get("violations") or {}).get(r)]
+        if not j:
+            if violated:
+                uncheckable.append("%s：裁判未跑或调用失败（%s），%s 无法核对"
+                                   % (c["id"], c.get("judge_note", ""), "/".join(violated)))
+            continue
+        for rule in violated:
+            msgs = c["violations"][rule]
+            for dim, cap in CONTRACT_CAPS[rule]:
+                cell = j.get(dim)
+                if not isinstance(cell, dict) or "score" not in cell:
+                    continue
+                checkable += 1
+                if cell["score"] > cap:
+                    items.append({
+                        "case": c["id"], "dimension": dim, "score": cell["score"],
+                        "cap": cap, "rule": rule, "evidence": msgs[0],
+                        "reason": (cell.get("reason") or "")[:70],
+                    })
+        if c.get("rule_pass"):
+            for dim, cell in j.items():
+                if isinstance(cell, dict) and cell.get("score", 5) <= 2:
+                    strict.append("%s / %s=%s：规则通道 8 项全过，裁判却给低分（理由：%s）"
+                                  % (c["id"], dim, cell["score"], (cell.get("reason") or "")[:60]))
+        else:
+            # 规则通道有违规时，只查"没被任何规则点到的维度"：裁判在那里给 ≤2 分就是无证据压分
+            # （v6 实测：收紧 hallucination 定义后，裁判把"账号 A"这类抽象占位当成虚构凭证打了 1 分）
+            fired = set(violated)
+            for dim, rules in DIM_RULES.items():
+                cell = j.get(dim)
+                if not isinstance(cell, dict) or not isinstance(cell.get("score"), (int, float)):
+                    continue
+                if cell["score"] <= 2 and not (fired & set(rules)):
+                    strict.append("%s / %s=%s：规则通道没检出 %s 类违规，裁判却判低分（理由：%s）"
+                                  % (c["id"], dim, cell["score"], "/".join(rules),
+                                     (cell.get("reason") or "")[:60]))
+    return {
+        "checkable": checkable,
+        "contradictions": len(items),
+        "contradiction_rate": (len(items) / checkable) if checkable else None,
+        "items": items,
+        "strict_flags": strict,
+        "uncheckable": uncheckable,
+    }
+
+
+def render_agreement(agg):
+    """把一致性核对结果渲染成报告小节（独立成函数，零 key 可测）。"""
+    lines = ["## 裁判-规则一致性（自动核对，不等于人工校准）", ""]
+    if not agg["checkable"] and not agg["uncheckable"]:
+        lines.append("（本次无可核对项：规则通道没检出契约类违规，或裁判未跑）")
+        return lines
+    if agg["contradiction_rate"] is None:
+        lines.append("- 可核对 0 项 · 矛盾 0 项 · 矛盾率 —（分母为 0，不算指标）")
+    else:
+        lines.append("- 可核对 %d 项 · 矛盾 %d 项 · **矛盾率 %.0f%%**"
+                     "（裁判给分高于规则结论允许的上限）"
+                     % (agg["checkable"], agg["contradictions"],
+                        agg["contradiction_rate"] * 100))
+    if agg["uncheckable"]:
+        lines.append("- 无法核对 %d 项（裁判未跑/调用失败，不进分母）" % len(agg["uncheckable"]))
+    if agg["strict_flags"]:
+        lines.append("- 反向可疑 %d 项（裁判给 ≤2 分但规则通道没有对应证据，需人工复批）"
+                     % len(agg["strict_flags"]))
+    if agg["items"]:
+        lines += ["", "| case | 维度 | 裁判分 | 上限 | 规则通道的确定性证据 | 裁判理由 |",
+                  "|:---|:---|:---|:---|:---|:---|"]
+        for it in agg["items"]:
+            lines.append("| %s | %s | %s | ≤%d | %s：%s | %s |" % (
+                it["case"], it["dimension"], it["score"], it["cap"],
+                it["rule"], it["evidence"][:38], it["reason"][:38]))
+    if agg["strict_flags"]:
+        lines.append("")
+    for s in agg["strict_flags"]:
+        lines.append("- %s" % s)
+    lines += ["", "> 这是「裁判有没有自相矛盾」的自动体检：矛盾率高 = 裁判在放过规则抓到的问题，",
+              "> 所以门禁只认规则通道、Judge 分数仅作参考；judge-人工一致率另见 calibration.yaml。"]
+    return lines
+
+
+def agreement_report(paths):
+    """对已存档的 JSON 报告离线重算一致性（可跨评测集版本对比裁判可靠性）。"""
+    rows, details = [], []
+    for p in paths:
+        rep = json.loads(Path(p).read_text(encoding="utf-8"))
+        if "cases" not in rep:
+            raise ValueError("%s 不是登记评测报告（缺 cases），扫描报告没有裁判分数" % p)
+        agg = judge_agreement(rep["cases"])
+        rate = "—" if agg["contradiction_rate"] is None else "%.0f%%" % (
+            agg["contradiction_rate"] * 100)
+        rows.append((Path(p).name, rep.get("evalset_version", "?"), rep.get("mode", "?"),
+                     agg["checkable"], agg["contradictions"], rate,
+                     len(agg["strict_flags"]), len(agg["uncheckable"])))
+        if agg["items"] or agg["strict_flags"]:
+            details.append("### %s" % Path(p).name)
+            details += ["- 矛盾：%s / %s=%s（上限 ≤%d）｜规则证据：%s｜裁判理由：%s"
+                        % (it["case"], it["dimension"], it["score"], it["cap"],
+                           it["evidence"][:50], it["reason"][:50]) for it in agg["items"]]
+            details += ["- 反向可疑：%s" % s for s in agg["strict_flags"]]
+            details.append("")
+    lines = ["# 裁判-规则一致性核对（离线重算已存档报告）", "",
+             "| 报告 | 评测集 | 模式 | 可核对 | 矛盾 | 矛盾率 | 反向可疑 | 无法核对 |",
+             "|:---|:---|:---|:---|:---|:---|:---|:---|"]
+    lines += ["| %s | v%s | %s | %d | %d | %s | %d | %d |" % r for r in rows]
+    if details:
+        lines += ["", "## 明细", ""] + details
+    lines += ["", "> 矛盾率 = 裁判给分高于「规则通道结论所允许的上限」的比例，纯自动、不需人工；",
+              "> 它只说明裁判是否自相矛盾，不等于 judge-人工一致率（那需要抽样复批，见 calibration.yaml）。"]
+    return lines
 
 
 def resolve_key():
@@ -540,10 +833,30 @@ def main():
                     help="A/B 回归用：替换 --live 的被测 SUT prompt（默认取评测集 meta.sut_prompt）")
     ap.add_argument("--diff", nargs=2, metavar=("OLD_JSON", "NEW_JSON"),
                     help="回归对比两份 JSON 报告：逐用例逐规则变好/变坏（零 key；退步>0 退出码 1）")
+    ap.add_argument("--runs", type=int, default=1, metavar="N",
+                    help="裁判稳定性：同一产出重复评 N 轮（需 key，默认 1 不测）；"
+                         "输出 pass@N、各维度极差、结论翻转，不参与退出码")
+    ap.add_argument("--judge-agreement", nargs="+", metavar="REPORT_JSON",
+                    help="裁判-规则一致率核对：拿裁判四维分数与规则通道确定性结论交叉比对，"
+                         "输出矛盾率（纯离线重算已存档报告，零 key）")
     args = ap.parse_args()
+
+    if args.runs < 1:
+        sys.exit("--runs 必须 ≥1（1 = 只评一次、不测稳定性）")
 
     if args.add:
         add_case(args)
+
+    if args.judge_agreement:
+        paths = [Path(p) for p in args.judge_agreement]
+        for p in paths:
+            if not p.is_file():
+                sys.exit("--judge-agreement: 报告不存在：%s" % p)
+        try:
+            print("\n".join(agreement_report(paths)))
+        except ValueError as e:
+            sys.exit("--judge-agreement: %s" % e)
+        sys.exit(0)
 
     if args.diff:
         paths = [Path(p) for p in args.diff]
@@ -651,13 +964,23 @@ def main():
                     for rule in RULES for msg in violations[rule]]
 
         judge_scores, judge_note = None, "skipped（无 API key，仅规则通道）"
+        judge_runs, stability = [], None
         if key:
-            try:
-                judge_scores = judge(fixture, output, jcfg, judge_model, base, key,
-                                     points, findings)
-                judge_note = "model=%s" % judge_model
-            except Exception as e:  # judge 失败不伪造分数，明确记录
-                judge_note = "error: %s" % e
+            # --runs N：同一产出重复评 N 轮，第 1 轮成功的分数即上表 Judge 列（保持与历史报告可比）
+            judge_runs, run_notes = judge_repeated(fixture, output, jcfg, judge_model, base, key,
+                                                   points, findings, args.runs)
+            judge_scores = next((r for r in judge_runs if isinstance(r, dict)), None)
+            failed = [n for n in run_notes if "error" in n]
+            if judge_scores is None:
+                judge_note = "error: %s" % (failed[0] if failed else "所有轮次均无有效分数")
+            else:
+                used = judge_runs.index(judge_scores) + 1
+                judge_note = "model=%s" % judge_model + (
+                    "" if args.runs == 1 else
+                    "（取第 %d/%d 轮%s）" % (used, args.runs,
+                                            "，失败 %d 轮" % len(failed) if failed else ""))
+            if args.runs > 1:
+                stability = case_stability(judge_runs, jcfg["dimensions"], jcfg["pass_threshold"])
 
         if case["kind"] == "negative-control":
             detected = {r for r in RULES if violations[r]}
@@ -674,6 +997,7 @@ def main():
             "violations": {r: violations[r] for r in RULES if violations[r]},
             "stats": stats, "rule_pass": rule_pass,
             "judge": judge_scores, "judge_note": judge_note, "verdict": verdict,
+            "judge_runs": judge_runs, "stability": stability,
         })
 
     positives = [r for r in results if r["kind"] == "positive"]
@@ -686,6 +1010,8 @@ def main():
         for p in positives)
     discrimination = all(n["verdict"] == "detected" for n in negatives)
     exit_ok = all(p["verdict"] == "pass" for p in positives) and discrimination
+    agreement = judge_agreement(results)   # 裁判 × 规则交叉核对（裁判没跑就是 0 可核对）
+    stability = judge_stability(results, jcfg["dimensions"], jcfg["pass_threshold"])
 
     now = datetime.datetime.now()
     stem = report_stem("baseline", now)
@@ -698,6 +1024,8 @@ def main():
         "mode": mode, "evalset_version": cfg["meta"]["version"],
         "key_source": key_src, "judge_model": judge_model if key else None,
         "cases": results,
+        "judge_agreement": agreement,
+        "judge_stability": stability,
         "aggregates": {
             "rule_compliance": compliance,
             "change_point_coverage": [covered_cp, total_cp],
@@ -713,6 +1041,22 @@ def main():
               ("启用（%s，key 来源 %s）" % (judge_model, key_src)) if key else "跳过（无 key，不伪造分数）"))
     md.append("- 判别力自测（负向对照）：%s" % ("✅ 全部检出" if discrimination else "❌ 有漏检"))
     md.append("- 变更点覆盖：%d/%d" % (covered_cp, total_cp))
+    if any(r["judge"] for r in results):
+        rate = agreement["contradiction_rate"]
+        md.append("- 裁判-规则一致性：可核对 %d 项 · 矛盾 %d 项 · 矛盾率 %s（明细见下方小节）"
+                  % (agreement["checkable"], agreement["contradictions"],
+                     "—" if rate is None else "%.0f%%" % (rate * 100)))
+    elif agreement["uncheckable"]:
+        md.append("- 裁判-规则一致性：裁判未跑，%d 项无法核对（不拿缺数据凑指标）"
+                  % len(agreement["uncheckable"]))
+    if args.runs > 1:
+        if stability["measured"]:
+            md.append("- 裁判稳定性：重复评 %d 轮 · 测了 %d 条 · 不稳定 %d 条 · 结论翻转 %d 条"
+                      "（明细见下方小节；不参与退出码）"
+                      % (stability["runs"], len(stability["measured"]),
+                         len(stability["unstable"]), len(stability["flipped"])))
+        else:
+            md.append("- 裁判稳定性：未测（%s）" % stability["reason"])
     md.append("")
     md.append("## 用例级结果")
     md.append("")
@@ -731,6 +1075,11 @@ def main():
     for r in RULES:
         md.append("| %s | %.0f%% |" % (r, compliance.get(r, 0) * 100))
     md.append("")
+    if any(r["judge"] for r in results):
+        md.extend(render_agreement(agreement))
+        md.append("")
+    if args.runs > 1:
+        md.extend(render_stability(stability))
     md.append("## 违规明细与建议根因（根因须人工确认，见 badcases.yaml）")
     md.append("")
     any_v = False
@@ -757,7 +1106,7 @@ def main():
             if r["kind"] == "negative-control" and r["verdict"] != "detected":
                 print("- 登记评测 %s：负向对照未全部检出，评测器自身可能坏了" % r["id"])
     else:
-        print("\n".join(md[:12]))
+        print("\n".join(md[:md.index("## 规则合规率（正样本）")]))
         print("报告已写入：%s/%s.{md,json}" % (out_dir, stem))
         print("exit_ok=%s" % exit_ok)
     sys.exit(0 if exit_ok else 1)

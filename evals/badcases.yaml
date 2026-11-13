@@ -109,7 +109,10 @@ entries:
       6 新增"禁止编造清单里没有的变更点"；未登记清单时 prompt 显式说明"未登记"而不是留空。
       验证待办（需 key，未跑不得声称已生效）：`python3 evals/evaluate.py`（v5 登记评测 Judge 基线）+
       `FORCE=1 bash evals/ab-demo.sh`，验收标准「B 变体 Judge 均分 < 4 且理由不得与规则通道结论矛盾、
-      A 变体仍高分」；跑完抽样人工复批并追加 calibration.yaml。
+      A 变体仍高分」，第二条已可量化：跑完用 `--judge-agreement` 离线重算矛盾率
+      （规则通道已判定的事实，裁判给分高于 CONTRACT_CAPS 上限即一次矛盾），
+      v4 基线是 B 变体 54%（15/28）、登记评测 36%（5/14）、v3 那轮 B 变体 74%（17/23），
+      v5 复跑必须低于 v4 同口径数字才算方向生效；跑完抽样人工复批并追加 calibration.yaml。
   - id: bc-0006
     case_id: tc-1020256-executed（--live B 变体产出，v4 那轮）
     date: 2026-11-13
@@ -125,6 +128,83 @@ entries:
     fix_ref: >-
       修法待确认：JUMP_RE 增补"执行TC\d+/同上用例/参考用例\d+"等模式前先确认误报风险
       （正常用例里可能合法出现"执行"字样），补合成用例 + 拿这份真实产物当锚点。
+  - id: bc-0007
+    case_id: tc-neg-secrets（v5 三次实跑全复现：登记评测 220749、A 臂 221318、B 臂 221550）
+    date: 2026-11-13
+    dimension: hallucination（评分标准与一致率指标未对齐）
+    phenomenon: >-
+      v5 把规则通道结论注入 judge prompt 后，矛盾率从 v4 的 36%/54% 降到 7%/4%，
+      但剩下这一条三次跑动全复现：规则通道检出"行1 前置条件含虚构凭证/内网地址"（no_secrets），
+      裁判 hallucination 仍给 5 分、理由写"未虚构需求中不存在的事实"。
+      比对 DIM_DEFS 与 CONTRACT_CAPS 后定位：指标侧定了 no_secrets → hallucination ≤2，
+      但维度定义既没写"以规则通道结论为准"，还留了"明确标注为示例/占位的测试账号不算虚构"的例外，
+      而该样本前置条件写的正是"使用测试账号 + 具体账号名 + 明文密码"（见 fixtures/neg-secrets.md 行1），
+      裁判顺着例外条款把它放过了。即不是模型乱来，是评分标准的例外口径太宽、与指标没对齐。
+    root_cause: evalset
+    suggested_by: AI 分析（v5 三份带 Judge 报告的 --judge-agreement 明细 + DIM_DEFS/CONTRACT_CAPS 逐条比对）
+    confirmed_by: null   # 人工确认必填，AI 建议不算数
+    status: open
+    fix_ref: >-
+      评测集 v5 → v6（2026-11-13，根因待确认）：hallucination 定义改为"先看规则通道有没有 no_secrets，
+      有则本维度不得高于 2、reason 必须承认该行事实（写未虚构即不合格理由）"；例外收紧为
+      "值本身带占位标记（尖括号占位符/示例/待补充/XXX/脱敏）"，并明文写"写测试账号再跟具体账号名 + 明文密码
+      不算标注，一律按虚构计"；补 5-1 分阶梯与举证要求；评审约定 5 增加"列出 no_secrets 时
+      hallucination 不得给 3 分以上"。验证待办（需 key，未跑不得声称已生效）：跑 `python3 evals/evaluate.py`
+      后用 `--judge-agreement` 核对，验收标准「tc-neg-secrets 的 hallucination 矛盾归零、
+      总矛盾率不高于 v5 的 7%，且正样本 hallucination 不因新定义虚降」。
+      实跑结果（2026-11-13，reports/baseline-2026-11-13-233955.*，export key）：三条全部达标——
+      tc-neg-secrets 的 hallucination 5 → 2 且理由如实承认虚构凭证；总矛盾率仍 7%（1/14）但换了对象
+      （见 bc-0008）；正样本 hallucination 仍 5/5/5、四维均分 4.75/4.75/4.25 未虚降。
+      根因归类与「已修复」判定仍待人工确认（AI 只报实测数字）；人工抽样复批未做，calibration.yaml 待补。
+  - id: bc-0008
+    case_id: tc-neg-format（v6 实跑 reports/baseline-2026-11-13-233955.*）
+    date: 2026-11-13
+    dimension: consistency（裁判绕过降分上限）
+    phenomenon: >-
+      v6 治好 bc-0007 后，登记评测矛盾率仍是 7%（1/14），换成了这一条：
+      规则通道检出"行3 列数8≠9"（format_columns，映射 consistency ≤3），
+      裁判 consistency 给 4 分，理由写"用例自身前后一致且可独立执行，但存在列数错误，
+      这是格式问题而非内容不一致"。即裁判承认了事实、但用"格式问题不算内容不一致"
+      把上限绕过去了——v4 那轮是 outright 否认事实（写"优先级使用 P0/P1/P2"），
+      这轮是承认事实后重新定义口径，属同一类"上限不被执行"的新变种。
+    root_cause: evalset
+    suggested_by: AI 分析（--judge-agreement 明细 + 裁判 reason 原文）
+    confirmed_by: null   # 人工确认必填，AI 建议不算数
+    status: open
+    fix_ref: >-
+      修法待确认（属评分标准调整，须走三件套：升版本 + 重跑基线 + 重新校准）：
+      在 consistency 定义里明写"列结构/优先级/跳转引用等契约项属内容契约的一部分，
+      不得以'这是格式问题不是内容问题'为由免于降分；规则通道列出契约违规时本维度不得高于 3"。
+      实测补充（2026-11-14，--runs 3）：该条 consistency 三轮为 3~4，只有给 4 分那轮绕过上限，
+      即逃逸不是每轮都发生——单跑可能碰不到，重复评才看得见。
+      验收标准：v7 复跑后该条矛盾归零、`--runs 3` 下 consistency 不再出现 4 分，且总矛盾率低于 7%，
+      正样本 consistency 不虚降。
+  - id: bc-0009
+    case_id: tc-neg-priority / tc-neg-traceability（v6 实跑，反向可疑 2 项）
+    date: 2026-11-13
+    dimension: hallucination（v6 收紧后过度纠正）
+    phenomenon: >-
+      v6 把 hallucination 与 no_secrets 绑定后，裁判对"虚构"过度敏感：
+      tc-neg-priority 的 hallucination 给 1 分、tc-neg-traceability 给 2 分，
+      理由都写"用例中虚构了账号 A 和密码，这些信息在需求原文中没有给出"——
+      而这两份 fixture 里只有"账号 A"这类抽象占位，没有任何凭证，规则通道 no_secrets 也没检出。
+      即 v6 的例外条款只认"值本身带占位标记"，把抽象指代（账号 A / 某用户）也算成了虚构。
+      这两项被本指标的"反向可疑"抓到（老实现只在规则 8 项全过时才查，会漏报，已补 DIM_RULES 反查表）。
+      后续证据（2026-11-14，reports/baseline-2026-11-14-001756.*，--runs 3 重复评）：
+      同一误判扩大到 4 条负向对照（priority/traceability/jump-refs/expected-empty），
+      其中前三条 hallucination 三轮全给 1 分、极差 0——**稳定地错，不是抖动**，
+      属评分标准口径问题而非模型随机性；该轮反向可疑 4 项、矛盾率仍 7%（1/14，见 bc-0008）。
+    root_cause: evalset
+    suggested_by: AI 分析（--judge-agreement 反向可疑明细 + fixtures/neg-priority.md、fixtures/neg-traceability.md 复读）
+    confirmed_by: null   # 人工确认必填，AI 建议不算数
+    status: open
+    fix_ref: >-
+      修法待确认（与 bc-0008 可合并成一次 v7）：在 hallucination 的例外里补一类
+      "抽象指代/占位（账号 A、某用户、用户甲、<账号>、XX 门店）不算虚构凭证，
+      但只要跟了具体账号名/明文密码/IP/域名就仍按虚构计"。
+      验收标准（可量化）：v7 复跑后 `--judge-agreement` 的反向可疑归零（本轮实测 4 项），
+      `--runs 3` 下这四条 hallucination 不再恒为 1，且 tc-neg-secrets 的 hallucination 仍 ≤2
+      （不能把 bc-0007 治好的又放回去）。
 # 示例（注释，非真实条目）：
 # - id: bc-0001
 #   case_id: tc-1000001-good
