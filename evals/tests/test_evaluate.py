@@ -13,6 +13,8 @@
    （与运行时退出码语义一致，防止评测集或规则被改坏）
 6. 报告命名（同日重跑不覆盖）与回归对比 --diff：退步/变好/抖动语义、
    Judge ±1 不判退步、扫描报告对比、类型不匹配拒绝、真实基线锚点
+7. 表头漂移兜底与 A/B 演示产物锚点：非标准表头按列名继续查内容（bc-0003 回归），
+   evals/ab-demo/ 里 A 变体必须零违规、B 变体必须被检出
 
 运行：python3 -m pytest evals/tests -q
 """
@@ -152,6 +154,128 @@ class TestRuleCheck:
         assert v["priority_valid"] == ["行1 优先级'P9'非法", "行2 优先级'P8'非法"]
 
 
+# ---------- 2b. 表头漂移兜底（A/B prompt 演示发现的盲区，bc-0003） ----------
+#
+# 历史实现：列数≠9 的行报完 format_columns 就 continue，后面 5 项行级检查全跳过。
+# 后果：被测 prompt 一改成"表头列数按需精简"，输出漂成 6 列，P3 优先级、
+# 前置条件里的"同上"、缺失的关联引用列全部漏检——表格结构漂移把内容缺陷藏起来了。
+# 现在：表头非标准 9 列时，按列名定位兜底检查，能查多少查多少。
+
+DRIFT_HEADER = "| 序号 | 测试项 | 优先级 | 前置条件 | 操作步骤 | 预期结果 |"
+DRIFT_SEP = "| ---- | ---- | ---- | ---- | ---- | ---- |"
+
+
+def make_drift_table(*rows, header=DRIFT_HEADER):
+    return "\n".join([header, DRIFT_SEP] + ["| " + " | ".join(r) + " |" for r in rows])
+
+
+def drift_row(no="1", item="提交订单", prio="P1", pre="已登录商城",
+              steps="点击提交", exp="订单提交成功"):
+    return [no, item, prio, pre, steps, exp]
+
+
+class TestHeaderDriftFallback:
+    def test_standard_header_detection(self):
+        std = [c.strip() for c in HEADER.strip("|").split("|")]
+        assert evaluate.is_standard_header(std)
+        # 第 1 列名称各团队有差异，不影响判定
+        assert evaluate.is_standard_header(["需求ID+名称"] + std[1:])
+        assert not evaluate.is_standard_header(std[:6])              # 列数不够
+        assert not evaluate.is_standard_header(std[:1] + std[2:])    # 优先级不在第 2 列
+
+    def test_headers_and_rows_returned_per_table(self):
+        text = make_table(clean_row()) + "\n\n" + make_drift_table(drift_row())
+        tables = evaluate.parse_case_tables_with_headers(text)
+        assert len(tables) == 2
+        assert evaluate.is_standard_header(tables[0][0])
+        assert len(tables[0][1]) == 1 and len(tables[1][1]) == 1
+        # parse_case_tables 行为不变：仍然是扁平的行列表
+        assert len(evaluate.parse_case_tables(text)) == 2
+
+    def test_illegal_priority_caught_in_drifted_table(self):
+        v, _ = evaluate.rule_check(make_drift_table(drift_row(prio="P3")), [])
+        assert v["priority_valid"] == ["行1 优先级'P3'非法"]
+
+    @pytest.mark.parametrize("prio", ["高", "中", "低", ""])
+    def test_non_p_level_priority_caught(self, prio):
+        v, _ = evaluate.rule_check(make_drift_table(drift_row(prio=prio)), [])
+        assert v["priority_valid"], "优先级 %r 应被判非法" % prio
+
+    def test_jump_ref_caught_in_drifted_table(self):
+        v, _ = evaluate.rule_check(make_drift_table(drift_row(pre="同上")), [])
+        assert v["no_jump_refs"] == ["行1 前置条件含跳转引用"]
+
+    def test_secret_caught_in_drifted_table(self):
+        v, _ = evaluate.rule_check(make_drift_table(drift_row(steps="用 admin123 登录")), [])
+        assert v["no_secrets"] and "操作步骤" in v["no_secrets"][0]
+
+    def test_empty_expected_caught_in_drifted_table(self):
+        v, _ = evaluate.rule_check(make_drift_table(drift_row(exp="")), [])
+        assert v["expected_non_empty"] == ["行1 预期结果为空"]
+
+    def test_missing_ref_column_reported_once_per_table(self):
+        text = make_drift_table(drift_row(), drift_row(no="2"))
+        v, _ = evaluate.rule_check(text, [])
+        assert v["traceability"] == ["表头缺少关联引用列：用例无法追溯到变更点"]
+
+    def test_ref_column_honored_when_present(self):
+        header = "| 序号 | 优先级 | 关联引用 | 前置条件 | 操作步骤 | 预期结果 |"
+        text = "## 变更点说明\n①入口\n" + make_drift_table(
+            ["1", "P1", "①", "已登录", "点击提交", "成功"], header=header)
+        v, stats = evaluate.rule_check(text, ["①"])
+        assert v["coverage"] == [] and stats["covered"] == ["①"]
+        assert v["change_section"] == []
+
+    def test_row_numbering_stays_global_across_mixed_tables(self):
+        text = make_table(clean_row(prio="P9")) + "\n\n" + make_drift_table(drift_row(prio="P7"))
+        v, stats = evaluate.rule_check(text, [])
+        assert v["priority_valid"] == ["行1 优先级'P9'非法", "行2 优先级'P7'非法"]
+        assert stats["rows"] == 2
+
+    def test_standard_table_with_short_row_keeps_old_behavior(self):
+        # 标准表头 + 某行少一列：下标会错位，只报列数，不做兜底（避免误报）
+        short = clean_row()[:8]
+        v, _ = evaluate.rule_check(make_table(short), [])
+        assert v["format_columns"] == ["行1 列数8≠9"]
+        assert v["priority_valid"] == [] and v["no_jump_refs"] == []
+
+
+class TestAbDemoArtifacts:
+    """A/B prompt 演示的真实产物做锚点：B 变体必须被检出，A 变体必须干净。"""
+
+    AB = EVAL_DIR / "ab-demo"
+
+    def test_variant_b_outputs_are_flagged(self):
+        cases = sorted((self.AB / "b" / "cases").glob("*.md"))
+        assert cases, "缺 A/B 演示产物：先跑 bash evals/ab-demo.sh"
+        for path in cases:
+            v, _ = evaluate.rule_check(path.read_text(encoding="utf-8"), ["①", "②", "③"])
+            assert v["format_columns"], "%s 应检出表头/列数问题" % path.name
+            assert v["change_section"], "%s 应检出缺少变更点说明" % path.name
+
+    def test_variant_b_blind_spot_regression(self):
+        # bc-0003 锚点：这三处曾被"列数≠9 就 continue"漏掉
+        b = self.AB / "b" / "cases"
+        v, _ = evaluate.rule_check((b / "tc-1000001-good.md").read_text(encoding="utf-8"), [])
+        assert any("P3" in m for m in v["priority_valid"])
+        v, _ = evaluate.rule_check((b / "tc-1000002-good.md").read_text(encoding="utf-8"), [])
+        assert any("'高'" in m for m in v["priority_valid"])
+        v, _ = evaluate.rule_check((b / "tc-1020256-executed.md").read_text(encoding="utf-8"), [])
+        assert v["no_jump_refs"], "前置条件里的「同上」应被检出"
+
+    def test_variant_a_outputs_are_clean(self):
+        for path in sorted((self.AB / "a" / "cases").glob("*.md")):
+            v, _ = evaluate.rule_check(path.read_text(encoding="utf-8"), [])
+            assert all(v[r] == [] for r in evaluate.RULES), "%s 不该有违规：%s" % (
+                path.name, {k: x for k, x in v.items() if x})
+
+    def test_diff_report_records_regressions(self):
+        diffs = sorted(self.AB.glob("diff-*.md"))
+        assert diffs, "缺 A/B 对比报告：先跑 bash evals/ab-demo.sh"
+        text = diffs[-1].read_text(encoding="utf-8")
+        assert "❌ 退步" in text and "exit_ok：True → False" in text
+
+
 # ---------- 3. 扫描逻辑 ----------
 
 class TestScanRepo:
@@ -220,13 +344,18 @@ class TestEvalsetIntegrity:
         bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
         fields = set(bc["schema"]["fields"])
         status_enum = set(bc["schema"]["status_enum"])
-        root_causes = {"prompt", "model", "tool", "knowledge", "evalset"}
+        root_causes = {"prompt", "model", "tool", "knowledge", "evalset", "evaluator"}
         for e in bc["entries"]:
             assert set(e.keys()) == fields, "bc 条目字段与 schema 不一致: %s" % e["id"]
             assert e["status"] in status_enum
             assert e["root_cause"] in root_causes
-            # 人工确认制：confirmed_by 不得为空
-            assert e["confirmed_by"], "%s 缺人工确认" % e["id"]
+            # 人工确认制：只有 open（AI 草稿）允许 confirmed_by 为空；
+            # 一旦进入 confirmed/fixed/wontfix，必须有人名——AI 不能自己宣布修好了
+            if e["status"] == "open":
+                assert e["fix_ref"] is None or "待确认" in str(e["fix_ref"]), (
+                    "%s 是 open 草稿，fix_ref 不得声称已修复" % e["id"])
+            else:
+                assert e["confirmed_by"], "%s 缺人工确认" % e["id"]
 
     def test_calibration_schema(self):
         cal = yaml.safe_load((EVAL_DIR / "calibration.yaml").read_text(encoding="utf-8"))

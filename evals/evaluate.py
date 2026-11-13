@@ -13,6 +13,7 @@
   python3 evals/evaluate.py --scan --scan-root DIR  # 扫自定义用例目录（可多次指定）
   python3 evals/evaluate.py --add 用例.md --fixture 需求.md --points ①②  # 一键登记自己的用例
   python3 evals/evaluate.py --diff 旧报告.json 新报告.json  # 回归对比：逐用例逐规则变好/变坏（零 key）
+  python3 evals/evaluate.py --live --sut-prompt 变体.md    # A/B prompt 回归：换被测 prompt 现场生成（需 key）
   python3 evals/evaluate.py --out DIR       # 报告输出目录（默认 evals/reports）
 
 报告命名：<前缀>-<日期>-<时分秒>.{md,json}，同日重跑互不覆盖（Judge 基线不会被零 key 重跑顶掉）。
@@ -66,50 +67,115 @@ DIM_DEFS = {
 }
 
 
-def parse_case_tables(text):
-    """解析所有用例表，返回行列表（每行=单元格列表）。"""
-    rows, current = [], None
+def parse_case_tables_with_headers(text):
+    """解析所有用例表，返回 [(表头单元格, 该表数据行列表), ...]。
+
+    表头识别条件与 parse_case_tables 一致：以 | 开头且同时含"优先级""预期结果"。
+    保留表头是为了在表头非标准 9 列时，还能按列名兜底检查内容（见 rule_check）。
+    """
+    tables, header, rows = [], None, []
     for line in text.splitlines():
         s = line.strip()
         if s.startswith("|") and "优先级" in s and "预期结果" in s:
-            current = []
+            if header is not None:
+                tables.append((header, rows))
+            header = [c.strip() for c in s.strip("|").split("|")]
+            rows = []
             continue
-        if current is not None:
+        if header is not None:
             if s.startswith("|"):
                 cells = [c.strip() for c in s.strip("|").split("|")]
                 if all(set(c) <= set("-: ") for c in cells):
                     continue  # 分隔行
-                current.append(cells)
                 rows.append(cells)
             elif s == "":
-                current = None
-    return rows
+                tables.append((header, rows))
+                header, rows = None, []
+    if header is not None:
+        tables.append((header, rows))
+    return tables
+
+
+def parse_case_tables(text):
+    """解析所有用例表，返回行列表（每行=单元格列表）。"""
+    return [r for _h, rows in parse_case_tables_with_headers(text) for r in rows]
+
+
+def is_standard_header(header):
+    """标准 9 列表头：位置固定，可直接按下标取值（第 1 列名称各团队略有差异，不做约束）。"""
+    return (len(header) == 9 and header[1] == "优先级" and header[2] == "关联引用"
+            and header[7] == "预期结果")
+
+
+CHANGE_POINT_CHARS = "①②③④⑤⑥⑦⑧⑨⑩"
 
 
 def rule_check(text, expected_points):
     """规则通道：返回 {rule: [violations]} 与统计信息。"""
     v = {r: [] for r in RULES}
-    rows = parse_case_tables(text)
+    tables = parse_case_tables_with_headers(text)
+    rows = [r for _h, rs in tables for r in rs]
     if not rows:
         v["format_columns"].append("未解析到任何用例表")
     covered = set()
-    for i, r in enumerate(rows, 1):
-        if len(r) != 9:
-            v["format_columns"].append("行%d 列数%d≠9" % (i, len(r)))
+    i = 0   # 行号跨表连续，与历史报告口径一致
+    for header, trows in tables:
+        if is_standard_header(header):
+            for r in trows:
+                i += 1
+                if len(r) != 9:
+                    v["format_columns"].append("行%d 列数%d≠9" % (i, len(r)))
+                    continue
+                _, prio, ref, _typ, _name, pre, steps, exp, _actual = r
+                if prio not in ("P0", "P1", "P2"):
+                    v["priority_valid"].append("行%d 优先级%r非法" % (i, prio))
+                if not ref:
+                    v["traceability"].append("行%d 关联引用为空" % i)
+                covered.update(ch for ch in ref if ch in CHANGE_POINT_CHARS)
+                if not exp:
+                    v["expected_non_empty"].append("行%d 预期结果为空" % i)
+                for field, label in ((pre, "前置条件"), (steps, "操作步骤"), (exp, "预期结果")):
+                    if JUMP_RE.search(field):
+                        v["no_jump_refs"].append("行%d %s含跳转引用" % (i, label))
+                    if SECRET_RE.search(field):
+                        v["no_secrets"].append("行%d %s含虚构凭证/内网地址" % (i, label))
             continue
-        _, prio, ref, _typ, _name, pre, steps, exp, _actual = r
-        if prio not in ("P0", "P1", "P2"):
-            v["priority_valid"].append("行%d 优先级%r非法" % (i, prio))
-        if not ref:
-            v["traceability"].append("行%d 关联引用为空" % i)
-        covered.update(ch for ch in ref if ch in "①②③④⑤⑥⑦⑧⑨⑩")
-        if not exp:
-            v["expected_non_empty"].append("行%d 预期结果为空" % i)
-        for field, label in ((pre, "前置条件"), (steps, "操作步骤"), (exp, "预期结果")):
-            if JUMP_RE.search(field):
-                v["no_jump_refs"].append("行%d %s含跳转引用" % (i, label))
-            if SECRET_RE.search(field):
-                v["no_secrets"].append("行%d %s含虚构凭证/内网地址" % (i, label))
+
+        # 表头非标准（列数/列序变了）：按下标取值会错位，改成按列名兜底检查，
+        # 否则"表格结构漂移"会把优先级非法、跳转引用、空预期结果等内容缺陷一起藏起来
+        # （2026-11-13 A/B prompt 演示实测踩到，见 badcases.yaml bc-0003）。
+        v["format_columns"].append("表头非标准 9 列：%s（共 %d 列，已按列名兜底检查内容）"
+                                   % ("|".join(header), len(header)))
+        idx = {name: n for n, name in enumerate(header)}
+        if "关联引用" not in idx:
+            v["traceability"].append("表头缺少关联引用列：用例无法追溯到变更点")
+
+        def cell(r, name):
+            n = idx.get(name)
+            return r[n] if n is not None and n < len(r) else ""
+
+        for r in trows:
+            i += 1
+            if len(r) != 9:
+                v["format_columns"].append("行%d 列数%d≠9" % (i, len(r)))
+            prio = cell(r, "优先级")
+            if prio not in ("P0", "P1", "P2"):
+                v["priority_valid"].append("行%d 优先级%r非法" % (i, prio))
+            if "关联引用" in idx:
+                ref = cell(r, "关联引用")
+                if not ref:
+                    v["traceability"].append("行%d 关联引用为空" % i)
+                covered.update(ch for ch in ref if ch in CHANGE_POINT_CHARS)
+            exp = cell(r, "预期结果")
+            if not exp:
+                v["expected_non_empty"].append("行%d 预期结果为空" % i)
+            for name in ("前置条件", "操作步骤", "预期结果"):
+                field = cell(r, name)
+                if JUMP_RE.search(field):
+                    v["no_jump_refs"].append("行%d %s含跳转引用" % (i, name))
+                if SECRET_RE.search(field):
+                    v["no_secrets"].append("行%d %s含虚构凭证/内网地址" % (i, name))
+
     if "变更点" not in text:
         v["change_section"].append("缺少变更点说明")
     for cp in expected_points:
@@ -415,6 +481,8 @@ def main():
     ap.add_argument("--id", default="", help="登记 id（--add 可选，默认取用例文件名）")
     ap.add_argument("--scan-root", action="append", metavar="DIR",
                     help="自定义扫描根（--scan 用，可多次；默认项目约定目录）")
+    ap.add_argument("--sut-prompt", metavar="PROMPT_MD",
+                    help="A/B 回归用：替换 --live 的被测 SUT prompt（默认取评测集 meta.sut_prompt）")
     ap.add_argument("--diff", nargs=2, metavar=("OLD_JSON", "NEW_JSON"),
                     help="回归对比两份 JSON 报告：逐用例逐规则变好/变坏（零 key；退步>0 退出码 1）")
     args = ap.parse_args()
@@ -490,11 +558,22 @@ def main():
     if args.live and not key:
         sys.exit("--live 需要 API key（EVAL_LLM_API_KEY/GLM_API_KEY/OPENAI_API_KEY 任一）")
 
+    # --live 的被测 prompt（SUT）：A/B 回归时用 --sut-prompt 换掉默认那份
+    sut_prompt = None
+    if args.live:
+        sut_rel = args.sut_prompt or cfg["meta"]["sut_prompt"]
+        sut_path = Path(sut_rel)
+        if not sut_path.is_file():
+            sut_path = EVAL_DIR / sut_rel   # 也支持相对 evals/ 目录的写法（评测集里就是这么写的）
+        if not sut_path.is_file():
+            sys.exit("--sut-prompt 找不到文件：%s（可写绝对路径、相对当前目录、或相对 evals/ 的路径）" % sut_rel)
+        sut_prompt = sut_path.read_text(encoding="utf-8")
+        print("ℹ️ 被测 SUT prompt：%s" % sut_path)
+
     results = []
     for case in cfg["cases"]:
         fixture = (EVAL_DIR / case["fixture"]).read_text(encoding="utf-8")
         if args.live and case["kind"] == "positive":
-            sut_prompt = (EVAL_DIR / cfg["meta"]["sut_prompt"]).read_text(encoding="utf-8")
             output = llm_chat([{"role": "system", "content": sut_prompt},
                                {"role": "user", "content": "需求原文：\n" + fixture}],
                               args.sut_model, base, key)

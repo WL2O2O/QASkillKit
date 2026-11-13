@@ -10,6 +10,7 @@
 #   tool      — MCP/脚本/环境问题（OCR 错识、dbx 查询失败、browser-use 坑点）
 #   knowledge — team-memory/知识库缺失或错误的业务规则
 #   evalset   — 评测集自身标注错误（fixture/rubric 写错，须修评测集而非 SUT）
+#   evaluator — 评测器实现缺陷（规则通道漏检/误检、解析 bug；既不是 SUT 的问题，也不是标注问题）
 schema:
   fields: [id, case_id, date, dimension, phenomenon, root_cause, suggested_by, confirmed_by, status, fix_ref]
   status_enum: [open, confirmed, fixed, wontfix]
@@ -39,6 +40,39 @@ entries:
     confirmed_by: WL2O2O（2026-11-12）
     status: fixed
     fix_ref: evaluate.py judge() 评分标准修订（DIM_DEFS + 评审约定2）
+  # ↓ 2026-11-13 A/B prompt 回归演示（bash evals/ab-demo.sh）暴露的两条，均为 AI 起草、待人工确认
+  - id: bc-0003
+    case_id: tc-1000001-good（--live B 变体产出，非在册样本）
+    date: 2026-11-13
+    dimension: priority_valid / no_jump_refs / traceability（规则通道）
+    phenomenon: >-
+      规则通道遇到"列数≠9"的行只报 format_columns 就 continue，后续 5 项行级检查全部跳过。
+      B 变体（故意弱化的 prompt）现场生成的用例是 6 列表格，于是行内的 P3、"高/中"优先级、
+      前置条件里的"同上"、缺失的关联引用列全部漏检——B 报告里这三项合规率还显示 100%，
+      表格结构漂移把内容缺陷一起藏了起来。
+    root_cause: evaluator
+    suggested_by: AI 分析（A/B 演示对比 B 报告与 b/cases 真实产物时发现）
+    confirmed_by: null   # 待人工确认；确认后 status 置 fixed
+    status: open
+    fix_ref: >-
+      已实现待确认：parse_case_tables_with_headers() 保留表头，is_standard_header() 判定列序，
+      非标准表头改为按列名兜底检查（rule_check）；自测 TestHeaderDriftFallback +
+      TestAbDemoArtifacts（拿 B 的真实产物当锚点）；登记评测集与全仓扫描结果零变化
+      （--diff 旧新基线：退步 0 / 变好 0）。
+  - id: bc-0004
+    case_id: tc-1020256-executed（--live B 变体产出）
+    date: 2026-11-13
+    dimension: coverage / consistency（Judge 维度定义）
+    phenomenon: >-
+      B 变体产出规则通道查出变更点覆盖 0/5、缺变更点说明、6 列表格、4 处"同上"，
+      Judge（glm-4-flash）却给四维全 5.0；另两条正样本也只从 5.0 掉到 4.8/4.5，
+      仍在 ≥4 的及格线内。即"只用 LLM 裁判当门禁"会放过这种明显退步，
+      coverage 维度定义对"变更点是否真被逐条覆盖"约束不够。
+    root_cause: evalset
+    suggested_by: AI 分析（A/B 演示 A=5.0/5.0/5.0 vs B=4.8/4.5/5.0 对比）
+    confirmed_by: null   # 维度定义修订属评分标准变更：需人工确认 + 升评测集版本 + 重跑基线 + 重新校准
+    status: open
+    fix_ref: null
 # 示例（注释，非真实条目）：
 # - id: bc-0001
 #   case_id: tc-1000001-good

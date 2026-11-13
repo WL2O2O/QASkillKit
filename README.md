@@ -124,6 +124,8 @@ python3 evals/evaluate.py --live
 
 改了 prompt / 换了模型，想知道变好还是变坏？两份报告一条命令回归对比：`python3 evals/evaluate.py --diff 旧.json 新.json`，逐用例逐规则列出退步/变好（Judge ±1 抖动不算退步），退出码可直接当回归门禁。报告文件名带时分秒，同日重跑互不覆盖。
 
+想直接看效果：`bash evals/ab-demo.sh`（需 key）拿正式版 prompt 和一份**故意弱化版**各跑一次 `--live` 再自动对比。2026-11-13 真实运行判出 37 项退步（变更点覆盖 13/13 → 0/13、`exit_ok` True → False），还顺手暴露了评测器自己的一个漏检盲区（表格列数漂移后行级检查被跳过）——已修复并用这次的真实产物做自测锚点，产物与对比报告都在 `evals/ab-demo/`。
+
 **报告长什么样**（真实基线节选：好的 2 份通过，故意写坏的 1 份被全部检出；完整版在 `evals/reports/`）：
 
 ```markdown

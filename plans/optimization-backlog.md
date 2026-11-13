@@ -54,3 +54,13 @@
 - 基线：reports/baseline-2026-11-13-063552.*（v3 零 key，13/13 覆盖、9/9 检出、exit 0）；--diff v2→v3 零退步（覆盖 8/8→13/13 判变好，新用例进说明桶）；
 - 待办：新样本 Judge 基线待 export key 重跑 + 抽样校准（evals/README 已注明）；
 - 文档同步：中英 README 轨道 A 文案与 demo-zero-key 配图按 v3 真实输出重渲染，evals/README 情况 1/校准节/基线诚实声明更新。
+## A/B prompt 回归演示落地记录（2026-11-13，真实 live+judge 运行）
+
+- 工具：evaluate.py 新增 `--sut-prompt`（替换 --live 的被测 prompt；路径支持绝对/相对当前目录/相对 evals/ 三种写法，找不到给人话报错），A/B 跑法从此是一等公民；
+- 脚本：`evals/ab-demo.sh` 一键跑完 A（正式版 prompt）→ B（`evals/prompts/variant-b-weakened.md`，故意弱化：允许"同上"、放开 P3 与"高/中/低"、不要变更点表与覆盖矩阵、列数按需精简、只写 5 条主流程）→ `--diff`；key 只从环境读，脚本不写盘不打印；产物落 `evals/ab-demo/{a,b}/`（报告 + 现场生成用例快照）与 `evals/ab-demo/diff-*.md`；
+- 断点续跑：单变体约 2-5 分钟（3 次生成 + 12 次 Judge），首跑在 A 结束后中断过一次（B 目录空、`_tmp/eval-live` 里 A 的产物还在），因此脚本改为"已有报告 json 的变体自动跳过"，`FORCE=1` 强制重跑，并在开跑前打印耗时提示避免误判卡死；A 的快照已抢救到 `ab-demo/a/cases/`；
+- 真实结果（glm-4-flash，报告 092720 vs 093523）：A 干净——3 条正样本 Judge 四维全 5.0、变更点覆盖 13/13、exit_ok=True；B 退步——覆盖 0/13、exit_ok=False、`--diff` 判 ❌退步 37 项 / ✅变好 4 项 / ℹ️说明 5 项，对比退出码 1（可直接当 prompt 回归门禁）；
+- 意外收获 1（bc-0003，评测器盲区，已修）：规则通道遇到"列数≠9"的行只报 format_columns 就 continue，B 的 6 列表格里的 P3、"高/中"、前置条件"同上"、缺失关联引用列**当时全部漏检**（B 报告这三项合规率还显示 100%）。修法：`parse_case_tables_with_headers()` 保留表头 + `is_standard_header()` 判定列序，非标准表头改为按列名兜底检查；标准表头但某行少列仍只报列数（下标会错位，宁可不猜）。验证：登记评测集与全仓扫描结果零变化（--diff 旧新基线 退步 0/变好 0），新增 18 条 pytest（合成漂移表 + 拿这次 B 的真实产物当锚点），总数 94 条；
+- 意外收获 2（bc-0004，裁判宽松，待人工确认）：B 那份 `tc-1020256-executed` 规则通道查出覆盖 0/5、缺变更点说明、4 处"同上"，Judge 却给四维全 5.0（另两条也只 5.0→4.8/4.5，仍在及格线内）。说明**只靠 LLM 裁判当门禁会放过这种退步**，规则通道不是可选项；coverage 维度定义要不要收紧属评分标准变更，需人工确认 + 升评测集版本 + 重跑基线 + 重新校准，本次未动；
+- 待办：A/B 两份 live+judge 报告可当 v3 的 Judge 参考样本，但尚未人工抽样复批，一致率待补记 calibration.yaml；bc-0003/bc-0004 的 confirmed_by 仍为 null（open 草稿，pytest 已放宽为"只有 open 允许无人工确认"）；
+- 文档同步：evals/README 新增「A/B prompt 回归演示」节（含真实 diff 节选与两条发现）、pytest 条数与基线诚实声明更新，中英 README 各加一段，testcase-evaluator SKILL.md 模式表加 ab-demo.sh 与 --sut-prompt 两行。

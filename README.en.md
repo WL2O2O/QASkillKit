@@ -104,6 +104,8 @@ Provide any OpenAI-compatible key (e.g. `GLM_API_KEY`) to enable the LLM-as-Judg
 
 **Prompt/model regression** — `python3 evals/evaluate.py --diff old.json new.json` compares two reports per case and per rule, listing regressions vs improvements (a ±1 single-dimension judge change counts as run-to-run noise, not regression); the exit code works as a regression gate. Report filenames carry date + time, so same-day re-runs never overwrite earlier baselines.
 
+**See it in action** — `bash evals/ab-demo.sh` (needs a key) runs `--live` twice on the same evalset and model: once with the production prompt, once with a deliberately weakened variant, then diffs them. The real 2026-11-13 run flagged 37 regressions (change-point coverage 13/13 → 0/13, `exit_ok` True → False) and also exposed a blind spot in the evaluator itself (row-level checks were skipped whenever a table's column count drifted) — now fixed, with that run's real artifacts used as test anchors. Outputs and the diff report live in `evals/ab-demo/`.
+
 **Bring your own cases** — register with one command, no hand-written YAML:
 
 ```bash

@@ -5,15 +5,16 @@ description: >
   dual-channel evaluator: registered evals (8 rule assertions + LLM-as-Judge 4-dimension
   scoring), repo-wide structural scan (--scan), custom scan roots (--scan-root),
   one-command case registration (--add), regression comparison of two reports (--diff),
-  and on-the-fly generation with a key (--live).
+  on-the-fly generation with a key (--live), and a one-command A/B prompt regression demo
+  (evals/ab-demo.sh: production prompt vs a deliberately weakened variant, then --diff).
   Explains violations in plain language; badcase root causes and calibration records
   stay draft-only until a human confirms. Runs with zero keys, no TAPD needed.
   测试用例评测 Skill（简写 /eval）：登记评测、全仓结构扫描、--add 一键登记、--diff 回归对比、
-  有 key 时现场生成再评；
+  有 key 时现场生成再评、ab-demo.sh 一键 A/B prompt 回归（正式版 vs 故意弱化版）；
   违规解读成人话，badcase 根因与校准记录出草稿待人工确认。零 key 可跑、不依赖 TAPD。
   Use when the user says "评测/跑评测/给用例打分/eval", "evaluate/run evals/grade this
-  case file", "对比两次报告/有没有退步/回归对比", gives a case-file path for a quality
-  check, or types /eval.
+  case file", "对比两次报告/有没有退步/回归对比", "A/B 对比 prompt/prompt 回归演示",
+  gives a case-file path for a quality check, or types /eval.
 ---
 
 # Test-Case Evaluation (testcase-evaluator)
@@ -55,6 +56,8 @@ Always respond in the user's language.
 | Register my own case | `python3 evals/evaluate.py --add CASE.md --fixture REQ.md --points ①②` | copies the fixture, appends to cases.yaml preserving comments; remind the user to desensitize (public repo) |
 | AI writes cases, then grades | `python3 evals/evaluate.py --live` | needs a key; simplified (text only, no prototypes/DB) |
 | Compare two runs (prompt/model regression) | `python3 evals/evaluate.py --diff OLD.json NEW.json` | per-case per-rule better/worse; judge ±1 single-dim change = noise, drop ≥2 = regression; exit 1 on regressions; scan reports comparable too, but never baseline-vs-scan |
+| A/B prompt regression, one command | `bash evals/ab-demo.sh` | needs a key; `--live` with the production prompt (A) vs the deliberately weakened `evals/prompts/variant-b-weakened.md` (B), then `--diff`; exit 1 = regressions found; resumable, `FORCE=1` re-runs both; artifacts in `evals/ab-demo/` |
+| Your own prompt variant | `python3 evals/evaluate.py --live --sut-prompt VARIANT.md` | path may be absolute, cwd-relative, or relative to `evals/` |
 | Different model/vendor | env `EVAL_LLM_BASE_URL`/`EVAL_LLM_MODEL` or `--judge-model` | any OpenAI-compatible endpoint |
 
 ## Execution Notes
