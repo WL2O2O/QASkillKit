@@ -465,7 +465,7 @@ class TestJudgeRubric:
         # 评分标准变了就得升版本（三件套：升版本 + 重跑基线 + 重新校准）
         assert jcfg is not None
         meta = yaml.safe_load((EVAL_DIR / "cases.yaml").read_text(encoding="utf-8"))["meta"]
-        assert meta["version"] >= 6
+        assert meta["version"] >= 7
 
     def test_coverage_defers_mechanical_check_to_rules(self):
         # v5：coverage 不再让裁判自己拆清单/数覆盖，只评场景充分性与粒度（bc-0005 治疗）
@@ -480,7 +480,11 @@ class TestJudgeRubric:
         d = evaluate.DIM_DEFS["consistency"]
         # 契约项交给规则通道判，但裁判不得推翻其结论，且有明确降分上限
         assert "P3" in d and "同上" in d and "关联引用" in d
-        assert "不得否认" in d and "不高于 3" in d
+        assert "不得否认" in d and "不得高于 3" in d
+        # v7（bc-0008 治疗）：堵住"承认事实但重新定义口径"的逃逸路径
+        assert "内容契约的一部分" in d
+        assert "这是格式问题" in d and "免于降分" in d
+        assert "重新定义口径" in d
 
     def test_change_points_ground_truth_matches_expected(self):
         # 喂给裁判的清单必须与规则通道用的 expected_change_points 同编号，否则两通道各说各话
@@ -552,28 +556,42 @@ class TestJudgeRubric:
         assert e5["confirmed_by"] and e5["status"] in ("confirmed", "fixed")
         assert "v4 → v5" in e5["fix_ref"] and "待" in e5["fix_ref"]
 
-    def test_v6_verification_and_new_drafts_are_recorded(self):
-        # v6 实跑结果必须如实写回 bc-0007（达标数字 + 仍待人工确认），
-        # 新冒出的两类问题登记为 open 草稿：AI 只起草，confirmed_by 必须留空
+    def test_v6_verification_and_human_confirmation_are_recorded(self):
+        # bc-0007 的 v6 实测数字必须落盘，但根因还没人工确认 → 保持 open；
+        # bc-0008/bc-0009 的根因已由 WL2O2O 确认：前者四条验收全达标标 fixed，
+        # 后者只达标一半，只能标 confirmed（不许把"半治好"写成 fixed）
         bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
         by_id = {x["id"]: x for x in bc["entries"]}
         e7 = by_id["bc-0007"]
         assert "233955" in e7["fix_ref"] and "5 → 2" in e7["fix_ref"]   # 实测证据落盘
         assert e7["status"] == "open" and e7["confirmed_by"] is None     # 人工没确认就不许标 fixed
-        for bid, case, dim in (("bc-0008", "tc-neg-format", "consistency"),
-                               ("bc-0009", "tc-neg-priority", "hallucination")):
-            e = by_id[bid]
-            assert e["status"] == "open" and e["confirmed_by"] is None
-            assert e["root_cause"] in ("evalset", "model", "prompt")
-            assert case in e["case_id"] and dim in e["dimension"]
-            assert "待确认" in e["fix_ref"] and "验收标准" in e["fix_ref"]
-        # bc-0009 是 v6 收紧后的过度纠正：修法不得把 bc-0007 治好的又放回去
-        assert "仍 ≤2" in by_id["bc-0009"]["fix_ref"]
-        # v6 治疗（bc-0007：hallucination 定义与 CONTRACT_CAPS 未对齐）必须先有登记条目
-        e7 = next(x for x in bc["entries"] if x["id"] == "bc-0007")
         assert e7["root_cause"] == "evalset" and e7["dimension"].startswith("hallucination")
         assert "v5 → v6" in e7["fix_ref"]
-        assert e7["status"] == "open" and e7["confirmed_by"] is None  # 根因未人工确认前不得标 confirmed
+
+        e8 = by_id["bc-0008"]
+        assert e8["status"] == "fixed" and "WL2O2O" in e8["confirmed_by"]
+        assert e8["root_cause"] == "evalset" and "tc-neg-format" in e8["case_id"]
+        assert "consistency" in e8["dimension"]
+        assert "075449" in e8["fix_ref"] and "0%" in e8["fix_ref"]       # v7 达标证据落盘
+        assert "验收标准" in e8["fix_ref"]
+
+        e9 = by_id["bc-0009"]
+        assert e9["status"] == "confirmed" and "WL2O2O" in e9["confirmed_by"]
+        assert e9["root_cause"] == "evalset" and "tc-neg-priority" in e9["case_id"]
+        assert "hallucination" in e9["dimension"]
+        assert "只达标一半" in e9["fix_ref"] and "075449" in e9["fix_ref"]
+        # bc-0009 是 v6 收紧后的过度纠正：修法不得把 bc-0007 治好的又放回去
+        assert "仍 ≤2" in e9["fix_ref"]
+
+    def test_fixed_entries_always_carry_human_confirmation(self):
+        # 人工确认制的硬约束：任何 confirmed/fixed 条目都必须有 confirmed_by，
+        # 且 AI 起草的 open 条目不许偷偷带上确认人（防止"AI 自己给自己盖章"）
+        bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
+        for e in bc["entries"]:
+            if e["status"] in ("confirmed", "fixed", "wontfix"):
+                assert e["confirmed_by"], "%s 标了 %s 却没有人工确认" % (e["id"], e["status"])
+            else:
+                assert e["status"] == "open" and e["confirmed_by"] is None, e["id"]
 
 
     def test_hallucination_binds_to_rule_channel(self):
@@ -588,9 +606,26 @@ class TestJudgeRubric:
     def test_hallucination_placeholder_exception_is_narrow(self):
         # v5 的宽例外（"标注为示例/占位的测试账号不算虚构"）正是裁判放过虚构凭证的口子
         d = evaluate.DIM_DEFS["hallucination"]
-        assert "例外只有一种" in d and "占位标记" in d
-        assert "不算标注" in d and "一律按虚构计" in d
+        assert "例外只有两类" in d and "占位标记" in d
+        assert "不算标注" in d and "仍按虚构计" in d
         assert "测试账号" in d   # 必须点名这种写法
+
+    def test_hallucination_exempts_abstract_references(self):
+        # v7（bc-0009 治疗）：抽象指代不算虚构凭证——否则四条负向对照被稳定误判成 1 分
+        d = evaluate.DIM_DEFS["hallucination"]
+        assert "抽象指代" in d and "不算虚构" in d
+        for token in ("账号 A", "某用户", "用户甲", "XX 门店"):
+            assert token in d, "hallucination 例外没点名 %s" % token
+        assert "不得据此把本维度压到 3 分以下" in d
+        # 但 v6 治好的不能放回去：具体值跟在后面仍按虚构计
+        assert "一旦跟了具体账号名/明文密码/IP/域名" in d
+        assert "不得高于 2" in d
+
+    def test_convention_5_states_both_v7_calibrations(self, jcfg):
+        # 评审约定 5 是裁判最先读到的硬规矩，两条 v7 口径都得在里面露面
+        p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg, points=["① a"])
+        assert "重新定义口径" in p and "不免除上限" in p
+        assert "抽象指代" in p and "不得据此把 hallucination 压到 3 分以下" in p
 
     def test_convention_caps_hallucination_when_secrets_found(self, jcfg):
         p = evaluate.build_judge_prompt(
@@ -814,6 +849,7 @@ V4_B_REPORT = "ab-demo/b/baseline-2026-11-13-170848.json"
 V5_B_REPORT = "ab-demo/b/baseline-2026-11-13-221550.json"
 V6_REPORT = "reports/baseline-2026-11-13-233955.json"
 V6_RUNS3_REPORT = "reports/baseline-2026-11-14-001756.json"   # v6 + --runs 3 真实稳定性产物
+V7_RUNS3_REPORT = "reports/baseline-2026-11-14-075449.json"   # v7 + --runs 3：矛盾率首次归零
 
 
 class TestJudgeAgreement:
@@ -1247,3 +1283,50 @@ class TestJudgeStability:
         agg = evaluate.judge_agreement(rep["cases"])
         assert (agg["checkable"], agg["contradictions"]) == (14, 1)
         assert len(agg["strict_flags"]) == 4 and all("账号 A" in x for x in agg["strict_flags"])
+
+    def test_real_v7_runs3_report_meets_bc0008_bar(self):
+        # v7 真实锚点：bc-0008 的验收口径全部达标——tc-neg-format 的 consistency 三轮恒 3（不再出现 4），
+        # 总矛盾率首次归零（14 可核对 / 0 矛盾），正样本 consistency 未被虚降
+        rep = json.loads((EVAL_DIR / V7_RUNS3_REPORT).read_text(encoding="utf-8"))
+        assert rep["evalset_version"] == 7 and rep["judge_stability"]["runs"] == 3
+        agg = evaluate.judge_agreement(rep["cases"])
+        assert (agg["checkable"], agg["contradictions"]) == (14, 0)
+        assert agg["contradiction_rate"] == 0.0 and agg["items"] == []
+        st = evaluate.judge_stability(rep["cases"], list(DIMS),
+                                      rep["judge_stability"]["threshold"])
+        by_id = {row["id"]: row["stability"] for row in st["table"]}
+        assert by_id["tc-neg-format"]["dimensions"]["consistency"]["values"] == [3, 3, 3]
+        for cid in ("tc-1000001-good", "tc-1000002-good", "tc-1020256-executed"):
+            assert by_id[cid]["pass_at_n"] == "3/3" and by_id[cid]["spread_max"] <= 1
+            assert by_id[cid]["dimensions"]["consistency"]["min"] >= 4   # 正样本没被新口径压低
+
+    def test_real_v7_runs3_report_only_partially_meets_bc0009_bar(self):
+        # v7 真实锚点（如实记不达标的一半）：bc-0009 要求"反向可疑归零"，实测 4 → 1，
+        # 抽象占位误判从"稳定地错"变成"间歇性地错"——所以 badcase 仍 open，不得写成已修复
+        rep = json.loads((EVAL_DIR / V7_RUNS3_REPORT).read_text(encoding="utf-8"))
+        agg = evaluate.judge_agreement(rep["cases"])
+        assert len(agg["strict_flags"]) == 1 and "账号 A" in agg["strict_flags"][0]
+        assert "tc-neg-coverage" in agg["strict_flags"][0]
+        st = evaluate.judge_stability(rep["cases"], list(DIMS),
+                                      rep["judge_stability"]["threshold"])
+        by_id = {row["id"]: row["stability"] for row in st["table"]}
+        # v6 那轮三条负向对照 hallucination 三轮全 1（稳定地错）；v7 后不再是 1
+        for cid in ("tc-neg-priority", "tc-neg-traceability", "tc-neg-jump-refs"):
+            assert by_id[cid]["dimensions"]["hallucination"]["values"] == [5, 5, 5]
+        # 但误判没根除：两条负向对照的 hallucination 极差 4、结论翻转（稳定性小节抓到的就是这个）
+        assert sorted(st["unstable"]) == sorted([
+            "tc-neg-expected-empty：hallucination 极差 4（5→2→1）",
+            "tc-neg-coverage：hallucination 极差 4（1→5→5）"])
+        assert len(st["flipped"]) == 2
+        # bc-0007 不能被 v7 放回去：tc-neg-secrets 的 hallucination 三轮都 ≤2
+        assert by_id["tc-neg-secrets"]["dimensions"]["hallucination"]["max"] <= 2
+
+    def test_v7_report_is_the_first_zero_contradiction_run(self):
+        # 十一份历史带裁判报告矛盾都 > 0（见上一条测试），v7 是第一份 0 矛盾的：
+        # 这条断言把"指标不是被调松的"钉住——上限映射与判定逻辑一个字没改，只是裁判开始守规矩
+        for old in (V4_B_REPORT, V5_B_REPORT, V6_REPORT, V6_RUNS3_REPORT):
+            rep = json.loads((EVAL_DIR / old).read_text(encoding="utf-8"))
+            assert evaluate.judge_agreement(rep["cases"])["contradictions"] > 0, old
+        v7 = json.loads((EVAL_DIR / V7_RUNS3_REPORT).read_text(encoding="utf-8"))
+        assert evaluate.judge_agreement(v7["cases"])["contradictions"] == 0
+        assert evaluate.CONTRACT_CAPS["format_columns"] == [("consistency", 3)]  # 口径未动

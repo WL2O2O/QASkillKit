@@ -99,9 +99,18 @@ output (blocking items only).
 - Since v6 `hallucination` is bound to the `no_secrets` rule finding: if the rules list a
   fabricated credential/intranet address, the score must be ≤2 and the reason must admit that
   row. A judge that scores it high, or writes "nothing fabricated", is a bc-0007-pattern badcase.
+- Since v7 both known rubric escapes are closed in the prompt text: `consistency` states that
+  column structure / priority values / jump references are part of the content contract and may not be
+  excused as "a formatting issue, not an inconsistency" (bc-0008), and `hallucination` lists two
+  exceptions — explicit placeholder markers and abstract references ("account A", "some user",
+  "store XX") — while any concrete account name / plaintext password / IP / domain still counts as
+  fabricated (bc-0009, without undoing bc-0007). If a judge reason still uses either escape,
+  that is evidence the rubric wording is not being obeyed — draft a badcase, don't tune the score.
 - `--runs N` (stability) → report pass@N and the flip list, not just the means: a case whose
   verdict flips between rounds must never be presented as "judge says pass". Unstable dimensions
-  (spread ≥2) go to human re-review; the rule channel is unaffected by design.
+  (spread ≥2) go to human re-review; the rule channel is unaffected by design. A negative control
+  whose judge mean clears the 4.0 line is NOT a missed detection either — discrimination is the
+  rule channel's job (every negative control must come back `detected`).
 - Also watch the reverse direction (`strict_flags`, "reverse suspicion"): the judge scoring a
   dimension ≤2 with no matching rule evidence. Since v6 the known false positive is abstract
   placeholders — "account A" / "some user" / angle-bracket slots are NOT fabricated credentials.
