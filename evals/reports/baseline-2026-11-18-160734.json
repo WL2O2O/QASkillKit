@@ -1,0 +1,2718 @@
+{
+  "date": "2026-11-18",
+  "generated_at": "2026-11-18T16:07:34",
+  "mode": "offline+judge",
+  "evalset_version": 8,
+  "key_source": "GLM_API_KEY",
+  "judge_model": "glm-4-flash",
+  "cases": [
+    {
+      "id": "tc-1000001-good",
+      "kind": "positive",
+      "output_src": "../examples/sample-testcase.md",
+      "violations": {},
+      "stats": {
+        "rows": 7,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": true,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①、②、③都有主流程用例，但边界值测试和异常场景测试不够全面，例如变更点①缺少对锁定期间尝试登录的测试，变更点③缺少对锁定期间刷新页面后尝试登录的测试。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例都直接对应需求中的功能点或规则，没有遗漏或无关的测试内容。"
+        },
+        "consistency": {
+          "score": 5,
+          "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有依赖其他用例才能读懂的情况。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名都是示例或占位符，没有具体的可核验事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "pass",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有主流程用例，但边界值测试和异常场景测试不够全面，例如变更点①缺少对锁定期间尝试登录的测试，变更点③缺少对锁定期间刷新页面后尝试登录的测试。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则，没有遗漏或无关的测试内容。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有依赖其他用例才能读懂的情况。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名都是示例或占位符，没有具体的可核验事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有主流程用例，但边界值测试和异常场景测试不够全面，例如变更点①缺少对账号未锁定时尝试登录的测试，变更点③缺少对锁定时间未到时尝试登录的测试。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则，没有遗漏或无关的测试内容。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有发现内容不一致的情况。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token等都是示例或占位符，没有具体的可核验事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有主流程用例，但边界值测试和异常场景测试不够全面，例如变更点①缺少锁定期间尝试登录的用例，变更点③缺少刷新页面后尝试登录的用例。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，一条用例不依赖另一条才能读懂。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名都是示例或占位符，没有具体可核验的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.75,
+          4.75,
+          4.75
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-1000002-good",
+      "kind": "positive",
+      "output_src": "../demo/1000002-PC后台账户列表系统配置增加入库打码功能.md",
+      "violations": {},
+      "stats": {
+        "rows": 14,
+        "covered": [
+          "①",
+          "②",
+          "③",
+          "④",
+          "⑤"
+        ]
+      },
+      "rule_pass": true,
+      "judge": {
+        "coverage": {
+          "score": 5,
+          "reason": "所有变更点都有主流程、边界值和异常场景的用例覆盖，粒度足够细，可以直接执行。例如，变更点①的用例覆盖了分组显示，变更点②的用例覆盖了配置项卡片的显示和状态，变更点③的用例覆盖了弹窗的UI和文案，变更点④的用例覆盖了保存时的校验逻辑，变更点⑤的用例覆盖了默认值规则。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例都直接对应需求中的功能点或规则，例如，用例名称和步骤都与需求描述一致。"
+        },
+        "consistency": {
+          "score": 5,
+          "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有依赖其他用例才能读懂的情况。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token、内网IP/域名、URL、库表名、具体人名/门店名都是具体可核验的值。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "pass",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 5,
+            "reason": "所有变更点都有主流程、边界值和异常场景的用例覆盖，粒度足够细，可以直接执行。例如，变更点①的用例覆盖了分组显示，变更点②的用例覆盖了配置项卡片的显示和状态，变更点③的用例覆盖了弹窗的UI和文案，变更点④的用例覆盖了保存时的校验逻辑，变更点⑤的用例覆盖了默认值规则。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则，例如，用例名称和步骤都与需求描述一致。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有依赖其他用例才能读懂的情况。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token、内网IP/域名、URL、库表名、具体人名/门店名都是具体可核验的值。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 5,
+            "reason": "所有变更点都有主流程、边界值和异常场景的用例覆盖，粒度足够细，可以直接执行。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则，没有遗漏或无关的用例。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致，术语与字段名统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有依赖其他用例才能理解的情况。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名都是可核验的具体值。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 5,
+            "reason": "所有变更点都有主流程、边界值、异常场景（如库存批次未开启的报错），粒度细到可执行，如保存按钮的防抖验证。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则，如新增分组、配置项卡片、弹窗UI、保存校验逻辑等。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实，所有账号、密码、token等都是具体可核验的值。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          5.0,
+          5.0,
+          5.0
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-1020256-executed",
+      "kind": "positive",
+      "output_src": "../workspace/testcases/sprint100/demo1.md",
+      "violations": {},
+      "stats": {
+        "rows": 11,
+        "covered": [
+          "①",
+          "②",
+          "③",
+          "④",
+          "⑤"
+        ]
+      },
+      "rule_pass": true,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点④的导出按钮防抖测试未覆盖异常场景，变更点⑤的导出合计统计未覆盖空值情况。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例均直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例自身前后一致且可独立执行，但存在一处列数错误，未影响内容一致性。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中未虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "pass",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景未覆盖，变更点④的导出按钮防抖测试未覆盖异常场景，变更点⑤的导出合计统计未覆盖空值情况。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例均直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，但存在一处列数错误，未影响内容一致性。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中未虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景未覆盖，变更点④的导出按钮防抖测试用例未覆盖快速重复点击的边界场景，变更点⑤的导出合计统计未覆盖空值或超长数据的情况。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有测试用例均直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，但部分用例的列数与表头存在轻微漂移。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景未完全覆盖，例如变更点①缺少无库存商品门店展示的场景；变更点②缺少列头帮助文案的异常场景。变更点④和⑤的边界值和异常场景也需补充，如导出按钮防抖的异常情况。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则，没有遗漏或无关的用例。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。但存在一处格式问题，即导出 Excel 表头显示错误，应为'库存金额'而非'库存总金额'。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实，所有账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名都是具体可核验的。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.25,
+          4.25,
+          4.25
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-1000001-negative",
+      "kind": "negative-control",
+      "output_src": "fixtures/1000001-bad-output.md",
+      "violations": {
+        "format_columns": [
+          "行4 列数8≠9"
+        ],
+        "priority_valid": [
+          "行1 优先级'P5'非法"
+        ],
+        "no_jump_refs": [
+          "行2 前置条件含跳转引用"
+        ],
+        "expected_non_empty": [
+          "行3 预期结果为空"
+        ],
+        "no_secrets": [
+          "行5 前置条件含虚构凭证/内网地址"
+        ],
+        "coverage": [
+          "变更点③未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 5,
+        "covered": [
+          "①",
+          "②"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③的异常场景未覆盖，且用例粒度不够细，例如未具体说明锁定期间输入正确密码的步骤和预期结果。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 2,
+          "reason": "存在格式错误，如非法优先级（P5）和列数缺失（行4 列数8≠9），以及跳转引用（行2 前置条件含跳转引用）。预期结果为空（行3 预期结果为空）。"
+        },
+        "hallucination": {
+          "score": 1,
+          "reason": "前置条件含虚构凭证/内网地址（行5 前置条件含虚构凭证/内网地址），具体为'使用管理员账号 密码: admin123 登录后台'。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③的异常场景未覆盖，且用例粒度不够细，例如未具体说明锁定期间输入正确密码的步骤和预期结果。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 2,
+            "reason": "存在格式错误，如非法优先级（P5）和列数缺失（行4 列数8≠9），以及跳转引用（行2 前置条件含跳转引用）。预期结果为空（行3 预期结果为空）。"
+          },
+          "hallucination": {
+            "score": 1,
+            "reason": "前置条件含虚构凭证/内网地址（行5 前置条件含虚构凭证/内网地址），具体为'使用管理员账号 密码: admin123 登录后台'。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③的锁定期间提示剩余时间未覆盖。用例《锁定触发-第5次错误锁定账号》覆盖了锁定账号的场景，但未覆盖锁定期间提示剩余时间的场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在一致性，但存在格式问题，如非法优先级和跳转引用。"
+          },
+          "hallucination": {
+            "score": 2,
+            "reason": "前置条件中包含虚构凭证（admin123），这是需求原文中没有给出的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③的锁定期间提示剩余时间未覆盖。用例《锁定触发-第5次错误锁定账号》覆盖了变更点①和②的锁定逻辑，但未覆盖变更点③的锁定期间提示剩余时间。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 2,
+            "reason": "存在格式问题，如非法优先级'P5'和跳转引用，以及预期结果为空。"
+          },
+          "hallucination": {
+            "score": 2,
+            "reason": "前置条件中包含虚构凭证'admin123'。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              2,
+              3,
+              2
+            ],
+            "mean": 2.33,
+            "min": 2,
+            "max": 3,
+            "spread": 1
+          },
+          "hallucination": {
+            "values": [
+              1,
+              2,
+              2
+            ],
+            "mean": 1.67,
+            "min": 1,
+            "max": 2,
+            "spread": 1
+          }
+        },
+        "means": [
+          2.75,
+          3.25,
+          3.0
+        ],
+        "pass_runs": 0,
+        "spread_max": 1,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "0/3"
+      }
+    },
+    {
+      "id": "tc-neg-format",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-format.md",
+      "violations": {
+        "format_columns": [
+          "行3 列数8≠9"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③缺少锁定期间输入正确密码的放行场景。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如第3次输错密码的场景和锁定期间输入正确密码的场景存在前置条件不一致的问题。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③缺少锁定期间输入正确密码的放行场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如第3次输错密码的场景和锁定期间输入正确密码的场景存在前置条件不一致的问题。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③缺少边界值测试（如锁定期间输入正确密码后立即尝试解锁）"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如第3次输错提示剩余次数且锁定不放行的用例中，第3次输错密码提交后直接继续输错至5次，没有明确说明是否需要等待一定时间或进行其他操作"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①和②的边界值和异常场景已覆盖，但变更点③的异常场景（锁定期间输入正确密码不放行）未覆盖。用例①覆盖了变更点①的主流程和边界值，用例②覆盖了变更点②的主流程、边界值和异常场景，用例③覆盖了变更点③的主流程。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例自身前后一致且可独立执行，但存在格式问题（行3列数错误），这影响了用例的一致性。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.25,
+          4.25,
+          4.25
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-neg-priority",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-priority.md",
+      "violations": {
+        "priority_valid": [
+          "行2 优先级'P5'非法"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①、②、③都有对应的用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未考虑。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例都直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间在术语和字段名上保持一致，但优先级取值不一致（P0和P5），且操作步骤中的账号A未明确说明是哪个账号。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未考虑。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间在术语和字段名上保持一致，但优先级取值不一致（P0和P5），且操作步骤中的账号A未明确说明是哪个账号。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和③的用例包含了主流程，但缺少边界值和异常场景的测试，例如未锁定账号尝试登录、锁定期间尝试登录等。变更点②的用例只包含了成功路径，缺少未开通租户的报错分支。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点，如连续输错密码锁定、错误次数提示等。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致，可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。但优先级取值存在非法值 P5，违反了规则通道已检出的确定性违规。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实，所有账号、密码、token等都是虚构的，但未违反规则通道已检出的确定性违规。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未考虑。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在优先级不一致的问题，如第2个用例的优先级为P5，而其他用例为P0或P1。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              3,
+              4
+            ],
+            "mean": 3.67,
+            "min": 3,
+            "max": 4,
+            "spread": 1
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              3,
+              4,
+              3
+            ],
+            "mean": 3.33,
+            "min": 3,
+            "max": 4,
+            "spread": 1
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.25,
+          4.25,
+          4.25
+        ],
+        "pass_runs": 3,
+        "spread_max": 1,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-neg-traceability",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-traceability.md",
+      "violations": {
+        "traceability": [
+          "行2 关联引用为空"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①和②的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景；变更点③的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例自身前后一致且可独立执行，但存在关联引用为空的问题。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①和②的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景；变更点③的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例自身前后一致且可独立执行，但存在关联引用为空的问题。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①和②的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景；变更点③的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例自身前后一致且可独立执行，但存在关联引用为空的问题。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①和②的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景；变更点③的用例已覆盖主要流程和边界值，但缺少锁定期间正确密码不放行的异常场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例自身前后一致且可独立执行，但存在关联引用为空的问题。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.25,
+          4.25,
+          4.25
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-neg-jump-refs",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-jump-refs.md",
+      "violations": {
+        "no_jump_refs": [
+          "行3 操作步骤含跳转引用"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①、②、③都有对应的用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未考虑。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间操作步骤和预期结果存在重复，如操作步骤1在多个用例中重复，且预期结果未完全一致。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未考虑。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间操作步骤和预期结果存在重复，如操作步骤1在多个用例中重复，且预期结果未完全一致。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但用例②缺少边界值测试，如第4次输错密码的情况；用例③缺少异常场景测试，如锁定期间尝试使用其他账号登录。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例自身前后一致且可独立执行，但存在跳转引用（违反了 no_jump_refs 规则），需要修正。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应用例，但②的边界值和异常场景未完全覆盖，例如未覆盖密码输入为空或超长的情况。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在跳转引用，违反了 no_jump_refs 规则，且部分用例的预期结果与操作步骤不完全对齐。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.25,
+          4.25,
+          4.25
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-neg-expected-empty",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-expected-empty.md",
+      "violations": {
+        "expected_non_empty": [
+          "行2 预期结果为空"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的边界值未覆盖。例如，变更点①缺少账号未锁定但错误计数大于5次的场景，变更点②缺少账号已锁定但尝试输入正确密码的场景，变更点③缺少锁定时间超过30分钟后的场景。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 3,
+          "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如，用例《第3次输错提示剩余次数》的前置条件是账号 A 已连续输错 2 次，但操作步骤是第 3 次输错密码提交，这与前置条件不符。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的边界值未覆盖。例如，变更点①缺少账号未锁定但错误计数大于5次的场景，变更点②缺少账号已锁定但尝试输入正确密码的场景，变更点③缺少锁定时间超过30分钟后的场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如，用例《第3次输错提示剩余次数》的前置条件是账号 A 已连续输错 2 次，但操作步骤是第 3 次输错密码提交，这与前置条件不符。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的边界值和异常场景未覆盖，变更点③的边界值和异常场景未覆盖。例如，变更点①缺少账号未锁定但错误计数为1次的情况，变更点②缺少账号已锁定但尝试登录的情况，变更点③缺少锁定时间未满30分钟但尝试登录的情况。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例之间存在前置条件与操作步骤不矛盾的情况，例如，用例《第3次输错提示剩余次数》的前置条件是账号 A 已连续输错 2 次，但操作步骤中未提及这一点。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①、②、③都有对应用例，但缺少边界值和异常场景的测试，如账号锁定后尝试登录、密码输入超长等。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 3,
+            "reason": "用例自身前后一致，但存在格式问题，如预期结果为空（规则通道已检出）。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.0,
+          4.0,
+          4.0
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-neg-secrets",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-secrets.md",
+      "violations": {
+        "no_secrets": [
+          "行1 前置条件含虚构凭证/内网地址"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①、②、③都有对应的用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未提及。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例都直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例自身前后一致且可独立执行，但存在一些术语和字段名未完全统一，如'账号 A'在不同用例中指代不同账号。"
+        },
+        "hallucination": {
+          "score": 2,
+          "reason": "存在虚构凭证，如'admin123'和'Test@123'，这些凭证在需求原文中没有给出。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未提及。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，但存在一些术语和字段名未完全统一，如'账号 A'在不同用例中指代不同账号。"
+          },
+          "hallucination": {
+            "score": 2,
+            "reason": "存在虚构凭证，如'admin123'和'Test@123'，这些凭证在需求原文中没有给出。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但边界值和异常场景的覆盖不够充分，例如未覆盖账号未开通的情况。用例①覆盖了连续输错5次锁定账号的场景，用例②覆盖了第3次输错提示剩余次数的场景，用例③覆盖了锁定期间正确密码不放行的场景。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则，例如用例①对应连续输错密码锁定账号的规则，用例②对应第3次输错提示剩余次数的规则，用例③对应锁定期间正确密码不放行的规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。但存在一些格式问题，例如列数和表头未检出问题，不影响内容一致性。"
+          },
+          "hallucination": {
+            "score": 2,
+            "reason": "存在虚构凭证，前置条件中使用了虚构的账号名和密码（admin123、Test@123），这些信息在需求原文中没有给出。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应用例，但②和③的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的场景，以及锁定期间超时或并发的情况未提及。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 5,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，没有发现内容契约违背。"
+          },
+          "hallucination": {
+            "score": 2,
+            "reason": "前置条件中出现了虚构的凭证（admin123），这是规则通道已检出的确定性违规。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              4,
+              4,
+              5
+            ],
+            "mean": 4.33,
+            "min": 4,
+            "max": 5,
+            "spread": 1
+          },
+          "hallucination": {
+            "values": [
+              2,
+              2,
+              2
+            ],
+            "mean": 2.0,
+            "min": 2,
+            "max": 2,
+            "spread": 0
+          }
+        },
+        "means": [
+          3.75,
+          3.75,
+          4.0
+        ],
+        "pass_runs": 1,
+        "spread_max": 1,
+        "unstable": [],
+        "flipped": true,
+        "pass_at_n": "1/3"
+      }
+    },
+    {
+      "id": "tc-neg-change-section",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-change-section.md",
+      "violations": {
+        "change_section": [
+          "缺少变更点说明"
+        ]
+      },
+      "stats": {
+        "rows": 3,
+        "covered": [
+          "①",
+          "②",
+          "③"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 4,
+          "reason": "变更点①、②、③都有对应的用例，但缺少边界值和异常场景的测试，例如未锁定账号尝试登录和锁定期间尝试登录的边界值测试。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例都直接对应需求中的功能点或规则。"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例自身前后一致且可独立执行，但存在一些术语和字段名未统一，例如'账号 A'在不同用例中的使用。"
+        },
+        "hallucination": {
+          "score": 5,
+          "reason": "用例中没有虚构需求原文里不存在的事实。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但缺少边界值和异常场景的测试，例如未锁定账号尝试登录和锁定期间尝试登录的边界值测试。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，但存在一些术语和字段名未统一，例如'账号 A'在不同用例中的使用。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应的用例，但变更点②的边界值和异常场景未完全覆盖，如未尝试次数为0或负数的情况未考虑。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例都直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，但存在一处格式问题，即用例名称中包含中文字符，这在某些系统中可能引起兼容性问题。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "用例中没有虚构需求原文里不存在的事实。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 4,
+            "reason": "变更点①、②、③都有对应用例，但缺少边界值和异常场景的测试，如账号锁定后尝试登录的响应、锁定时间到后的登录尝试等。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，但存在一些术语和字段名未完全统一，如'账号 A'在不同用例中的使用。"
+          },
+          "hallucination": {
+            "score": 5,
+            "reason": "没有虚构需求原文里不存在的事实。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.5,
+          4.5,
+          4.5
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    },
+    {
+      "id": "tc-neg-coverage",
+      "kind": "negative-control",
+      "output_src": "fixtures/neg-coverage.md",
+      "violations": {
+        "coverage": [
+          "变更点③未被任何用例覆盖"
+        ]
+      },
+      "stats": {
+        "rows": 2,
+        "covered": [
+          "①",
+          "②"
+        ]
+      },
+      "rule_pass": false,
+      "judge": {
+        "coverage": {
+          "score": 3,
+          "reason": "变更点①和②的用例覆盖了主要流程，但缺少边界值和异常场景的测试，例如未锁定账号输入正确密码不放行的情况（变更点③未被覆盖）。"
+        },
+        "relevance": {
+          "score": 5,
+          "reason": "所有用例直接对应需求中的功能点，例如连续输错密码锁定账号、第3次输错提示剩余次数等。"
+        },
+        "consistency": {
+          "score": 4,
+          "reason": "用例自身前后一致，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。但存在一个抽象指代（账号 A），这可能会引起混淆。"
+        },
+        "hallucination": {
+          "score": 4,
+          "reason": "用例中没有虚构需求原文里不存在的事实，但存在一个抽象指代（账号 A），这可能会引起混淆，但不足以判定为虚构。"
+        }
+      },
+      "judge_note": "model=glm-4-flash（取第 1/3 轮）",
+      "verdict": "detected",
+      "judge_runs": [
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的用例覆盖了主要流程，但缺少边界值和异常场景的测试，例如未锁定账号输入正确密码不放行的情况（变更点③未被覆盖）。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点，例如连续输错密码锁定账号、第3次输错提示剩余次数等。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。但存在一个抽象指代（账号 A），这可能会引起混淆。"
+          },
+          "hallucination": {
+            "score": 4,
+            "reason": "用例中没有虚构需求原文里不存在的事实，但存在一个抽象指代（账号 A），这可能会引起混淆，但不足以判定为虚构。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点③未被任何用例覆盖，变更点①和②的用例只覆盖了成功路径，缺少异常场景和边界值。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点或规则。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致且可独立执行，术语与字段名前后统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上，但存在一个抽象指代（账号 A），这可能导致潜在的不一致。"
+          },
+          "hallucination": {
+            "score": 4,
+            "reason": "存在一个抽象指代（账号 A），这可能导致潜在的不一致，但未发现明显的虚构凭证或内网地址。"
+          }
+        },
+        {
+          "coverage": {
+            "score": 3,
+            "reason": "变更点①和②的用例覆盖了主要流程，但缺少边界值和异常场景的测试，例如未锁定账号尝试登录、锁定期间尝试登录等。变更点③未被任何用例覆盖。"
+          },
+          "relevance": {
+            "score": 5,
+            "reason": "所有用例直接对应需求中的功能点，如连续输错密码锁定、错误次数提示等。"
+          },
+          "consistency": {
+            "score": 4,
+            "reason": "用例自身前后一致，术语与字段名统一，前置条件与操作步骤不矛盾，预期结果与操作步骤对得上。但存在一个抽象指代（账号 A），这可能会引起混淆。"
+          },
+          "hallucination": {
+            "score": 4,
+            "reason": "用例中没有虚构需求原文里不存在的事实，但存在一个抽象指代（账号 A），这可能会引起混淆。"
+          }
+        }
+      ],
+      "stability": {
+        "runs_requested": 3,
+        "runs_scored": 3,
+        "runs_failed": 0,
+        "dimensions": {
+          "coverage": {
+            "values": [
+              3,
+              3,
+              3
+            ],
+            "mean": 3.0,
+            "min": 3,
+            "max": 3,
+            "spread": 0
+          },
+          "relevance": {
+            "values": [
+              5,
+              5,
+              5
+            ],
+            "mean": 5.0,
+            "min": 5,
+            "max": 5,
+            "spread": 0
+          },
+          "consistency": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          },
+          "hallucination": {
+            "values": [
+              4,
+              4,
+              4
+            ],
+            "mean": 4.0,
+            "min": 4,
+            "max": 4,
+            "spread": 0
+          }
+        },
+        "means": [
+          4.0,
+          4.0,
+          4.0
+        ],
+        "pass_runs": 3,
+        "spread_max": 0,
+        "unstable": [],
+        "flipped": false,
+        "pass_at_n": "3/3"
+      }
+    }
+  ],
+  "judge_agreement": {
+    "checkable": 14,
+    "contradictions": 1,
+    "contradiction_rate": 0.07142857142857142,
+    "items": [
+      {
+        "case": "tc-neg-change-section",
+        "dimension": "coverage",
+        "score": 4,
+        "cap": 3,
+        "rule": "change_section",
+        "evidence": "缺少变更点说明",
+        "reason": "变更点①、②、③都有对应的用例，但缺少边界值和异常场景的测试，例如未锁定账号尝试登录和锁定期间尝试登录的边界值测试。"
+      }
+    ],
+    "strict_flags": [],
+    "uncheckable": []
+  },
+  "judge_stability": {
+    "runs": 3,
+    "spread_alert": 2,
+    "threshold": 4,
+    "measured": [
+      "tc-1000001-good",
+      "tc-1000002-good",
+      "tc-1020256-executed",
+      "tc-1000001-negative",
+      "tc-neg-format",
+      "tc-neg-priority",
+      "tc-neg-traceability",
+      "tc-neg-jump-refs",
+      "tc-neg-expected-empty",
+      "tc-neg-secrets",
+      "tc-neg-change-section",
+      "tc-neg-coverage"
+    ],
+    "table": [
+      {
+        "id": "tc-1000001-good",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.75,
+            4.75,
+            4.75
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-1000002-good",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            5.0,
+            5.0,
+            5.0
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-1020256-executed",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.25,
+            4.25,
+            4.25
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-1000001-negative",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                2,
+                3,
+                2
+              ],
+              "mean": 2.33,
+              "min": 2,
+              "max": 3,
+              "spread": 1
+            },
+            "hallucination": {
+              "values": [
+                1,
+                2,
+                2
+              ],
+              "mean": 1.67,
+              "min": 1,
+              "max": 2,
+              "spread": 1
+            }
+          },
+          "means": [
+            2.75,
+            3.25,
+            3.0
+          ],
+          "pass_runs": 0,
+          "spread_max": 1,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "0/3"
+        }
+      },
+      {
+        "id": "tc-neg-format",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.25,
+            4.25,
+            4.25
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-neg-priority",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                3,
+                4
+              ],
+              "mean": 3.67,
+              "min": 3,
+              "max": 4,
+              "spread": 1
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                3,
+                4,
+                3
+              ],
+              "mean": 3.33,
+              "min": 3,
+              "max": 4,
+              "spread": 1
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.25,
+            4.25,
+            4.25
+          ],
+          "pass_runs": 3,
+          "spread_max": 1,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-neg-traceability",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.25,
+            4.25,
+            4.25
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-neg-jump-refs",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.25,
+            4.25,
+            4.25
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-neg-expected-empty",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-neg-secrets",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                4,
+                4,
+                5
+              ],
+              "mean": 4.33,
+              "min": 4,
+              "max": 5,
+              "spread": 1
+            },
+            "hallucination": {
+              "values": [
+                2,
+                2,
+                2
+              ],
+              "mean": 2.0,
+              "min": 2,
+              "max": 2,
+              "spread": 0
+            }
+          },
+          "means": [
+            3.75,
+            3.75,
+            4.0
+          ],
+          "pass_runs": 1,
+          "spread_max": 1,
+          "unstable": [],
+          "flipped": true,
+          "pass_at_n": "1/3"
+        }
+      },
+      {
+        "id": "tc-neg-change-section",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.5,
+            4.5,
+            4.5
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      },
+      {
+        "id": "tc-neg-coverage",
+        "stability": {
+          "runs_requested": 3,
+          "runs_scored": 3,
+          "runs_failed": 0,
+          "dimensions": {
+            "coverage": {
+              "values": [
+                3,
+                3,
+                3
+              ],
+              "mean": 3.0,
+              "min": 3,
+              "max": 3,
+              "spread": 0
+            },
+            "relevance": {
+              "values": [
+                5,
+                5,
+                5
+              ],
+              "mean": 5.0,
+              "min": 5,
+              "max": 5,
+              "spread": 0
+            },
+            "consistency": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            },
+            "hallucination": {
+              "values": [
+                4,
+                4,
+                4
+              ],
+              "mean": 4.0,
+              "min": 4,
+              "max": 4,
+              "spread": 0
+            }
+          },
+          "means": [
+            4.0,
+            4.0,
+            4.0
+          ],
+          "pass_runs": 3,
+          "spread_max": 0,
+          "unstable": [],
+          "flipped": false,
+          "pass_at_n": "3/3"
+        }
+      }
+    ],
+    "unstable": [],
+    "flipped": [
+      "tc-neg-secrets：1/3 轮过线（各轮均分 3.75/3.75/4.00），单跑结论不可采信"
+    ],
+    "insufficient": [],
+    "reason": null
+  },
+  "aggregates": {
+    "rule_compliance": {
+      "format_columns": 1.0,
+      "priority_valid": 1.0,
+      "traceability": 1.0,
+      "no_jump_refs": 1.0,
+      "expected_non_empty": 1.0,
+      "no_secrets": 1.0,
+      "change_section": 1.0,
+      "coverage": 1.0
+    },
+    "change_point_coverage": [
+      13,
+      13
+    ],
+    "discrimination_ok": true,
+    "exit_ok": true
+  }
+}

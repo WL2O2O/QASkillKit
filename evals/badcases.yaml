@@ -70,17 +70,22 @@ entries:
       coverage 维度定义对"变更点是否真被逐条覆盖"约束不够。
     root_cause: evalset
     suggested_by: AI 分析（A/B 演示 A=5.0/5.0/5.0 vs B=4.8/4.5/5.0 对比）
-    confirmed_by: WL2O2O（2026-11-13，"发现即治疗"，同意升级维度定义）
-    status: confirmed
+    confirmed_by: WL2O2O（2026-11-13，"发现即治疗"，同意升级维度定义；2026-11-18 认可标 fixed）
+    status: fixed
     fix_ref: >-
       评分标准修订（2026-11-13）：DIM_DEFS coverage 改为"先逐变更点核对再打分 + 分数上限表"，
       consistency 明确纳入输出契约（列结构/P0-P2/不得出现"同上"），新增评审约定 4
       "格式退化不等于内容合格"；评测集 v3 → v4。
-      首轮验证（2026-11-13 export key 实跑：reports/baseline-2026-11-13-165241.*、
-      ab-demo/a/baseline-2026-11-13-170553.*、ab-demo/b/baseline-2026-11-13-170848.*）：
-      **未达验收标准**——B 变体 coverage
+      v4 首轮验证未达标（2026-11-13：reports/baseline-2026-11-13-165241.*、
+      ab-demo/a/baseline-2026-11-13-170553.*、ab-demo/b/baseline-2026-11-13-170848.*）——
+      B 变体 coverage
       由 5/5/5 降到 3/3/4（方向对），但四维均分 4.50/4.50/4.75 仍全部 ≥4，且核对结论系虚构、
-      consistency 上限未被执行；遗留问题转 bc-0005，本条不标 fixed。
+      consistency 上限未被执行；遗留问题转 bc-0005。
+      v5 分工重划后同一验收达标（2026-11-13：ab-demo/a/baseline-2026-11-13-221318.*、
+      ab-demo/b/baseline-2026-11-13-221550.*）：B 臂三份正样本 coverage 1/2/2 全部 < 4，
+      A 臂 coverage 4/4/3、案例均分 4.75/4.75/4.25 仍高分；B 臂矛盾率 54% → 3.6%（1/28），
+      剩余 1 项为 tc-neg-secrets 的 hallucination（已转 bc-0007，v6 治好）。
+      2026-11-18 由 WL2O2O 认可"已修复"判定，标 fixed。
   - id: bc-0005
     case_id: tc-1000001-good（v4 Judge 复跑，正反两个方向都出错）
     date: 2026-11-13
@@ -96,8 +101,8 @@ entries:
       即小模型裁判无法可靠执行"自己拆清单再逐点核对"这类多步指令，分数上限也压不住。
     root_cause: model
     suggested_by: AI 分析（v4 三份带 Judge 报告的理由逐条比对规则通道结果）
-    confirmed_by: WL2O2O（2026-11-13，认可归因"小模型指令遵循不足"，选定 (a)+(b) 组合治疗，从评测集侧兜住）
-    status: confirmed
+    confirmed_by: WL2O2O（2026-11-13，认可归因"小模型指令遵循不足"，选定 (a)+(b) 组合治疗，从评测集侧兜住；2026-11-18 认可标 fixed）
+    status: fixed
     fix_ref: >-
       评测集 v4 → v5（2026-11-13）：机械事实不再让裁判自己算——
       (a) cases.yaml 新增 `change_points` 段（按 fixture 给 ground-truth 变更点清单，编号由 pytest 锁定
@@ -107,12 +112,13 @@ entries:
       分数上限随之放宽并要求 reason 落到具体缺口；consistency 改为语义一致性 + 契约违背时不得高于 3；
       评审约定 4 改为"分工"、5 改为"规则通道有违规则 coverage/consistency 不得高于 3"、
       6 新增"禁止编造清单里没有的变更点"；未登记清单时 prompt 显式说明"未登记"而不是留空。
-      验证待办（需 key，未跑不得声称已生效）：`python3 evals/evaluate.py`（v5 登记评测 Judge 基线）+
-      `FORCE=1 bash evals/ab-demo.sh`，验收标准「B 变体 Judge 均分 < 4 且理由不得与规则通道结论矛盾、
-      A 变体仍高分」，第二条已可量化：跑完用 `--judge-agreement` 离线重算矛盾率
-      （规则通道已判定的事实，裁判给分高于 CONTRACT_CAPS 上限即一次矛盾），
-      v4 基线是 B 变体 54%（15/28）、登记评测 36%（5/14）、v3 那轮 B 变体 74%（17/23），
-      v5 复跑必须低于 v4 同口径数字才算方向生效；跑完抽样人工复批并追加 calibration.yaml。
+      v5 复跑结果（2026-11-13，export key）：`reports/baseline-2026-11-13-220749.*`（登记评测）+
+      `ab-demo/a/baseline-2026-11-13-221318.*` + `ab-demo/b/baseline-2026-11-13-221550.*`。
+      B 臂三份正样本的案例均分 2.75 / 3.25 / 2.25（全部 < 4），A 臂 4.75 / 4.75 / 4.25 仍高分；
+      B 臂矛盾率 54% → 3.6%（1/28），登记评测 36% → 7%（1/14）。
+      如实记录：v5 首轮还剩 1 项矛盾（tc-neg-secrets 的 hallucination，已转 bc-0007 并由 v6 治好），
+      故"理由不得矛盾"这条在 v5 当时没有严格归零，是 v6 补齐的；v7 登记评测进一步到 0%（0/14）。
+      2026-11-18 由 WL2O2O 认可"已修复"判定，标 fixed。
   - id: bc-0006
     case_id: tc-1020256-executed（--live B 变体产出，v4 那轮）
     date: 2026-11-13
@@ -123,11 +129,18 @@ entries:
       该轮报告 no_jump_refs 合规率仍显示 100%。属规则通道的漏检面（不是误报）。
     root_cause: evaluator
     suggested_by: AI 分析（ab-demo/b/cases-170848/tc-1020256-executed.md 人工复读发现）
-    confirmed_by: null   # 人工确认必填，AI 建议不算数
-    status: open
+    confirmed_by: WL2O2O（2026-11-18，认可 evaluator 归因）
+    status: fixed
     fix_ref: >-
-      修法待确认：JUMP_RE 增补"执行TC\d+/同上用例/参考用例\d+"等模式前先确认误报风险
-      （正常用例里可能合法出现"执行"字样），补合成用例 + 拿这份真实产物当锚点。
+      修法已实现并验证（2026-11-18）：JUMP_RE 增补跨用例引用分支 CROSS_CASE_RE——
+      "执行/参考/参照/复用/沿用/见/同 + 用例|TC|Case + 编号"才算跳转，编号是硬门槛，
+      所以"执行导出操作""执行登录""执行用例设计""不同用例的公共前置"都不误伤（见 test_jump_ref_boundary）；
+      标准 9 列表与表头漂移兜底两条路径都生效（test_cross_case_jump_ref_checked_in_both_table_paths）。
+      真实锚点：ab-demo/b/cases-170848/tc-1020256-executed.md 的 4 行前置条件逐行检出（行2~行5），
+      旧版整份 no_jump_refs 仍报合规（test_variant_b_cross_case_jump_refs_now_flagged）。
+      回归：pytest 180 全绿；登记评测与 v7 基线 baseline-2026-11-14-075031 对比 0 退步/0 变好/0 说明；
+      全仓扫描 3 份 0 违规；pre-commit 通过。
+      根因（evaluator，规则通道漏检）已于 2026-11-18 由 WL2O2O 签字成立，本条标 fixed。
   - id: bc-0007
     case_id: tc-neg-secrets（v5 三次实跑全复现：登记评测 220749、A 臂 221318、B 臂 221550）
     date: 2026-11-13
@@ -142,8 +155,8 @@ entries:
       裁判顺着例外条款把它放过了。即不是模型乱来，是评分标准的例外口径太宽、与指标没对齐。
     root_cause: evalset
     suggested_by: AI 分析（v5 三份带 Judge 报告的 --judge-agreement 明细 + DIM_DEFS/CONTRACT_CAPS 逐条比对）
-    confirmed_by: null   # 人工确认必填，AI 建议不算数
-    status: open
+    confirmed_by: WL2O2O（2026-11-18，认可 evalset 归因与「已修复」判定）
+    status: fixed
     fix_ref: >-
       评测集 v5 → v6（2026-11-13，根因待确认）：hallucination 定义改为"先看规则通道有没有 no_secrets，
       有则本维度不得高于 2、reason 必须承认该行事实（写未虚构即不合格理由）"；例外收紧为
@@ -155,7 +168,11 @@ entries:
       实跑结果（2026-11-13，reports/baseline-2026-11-13-233955.*，export key）：三条全部达标——
       tc-neg-secrets 的 hallucination 5 → 2 且理由如实承认虚构凭证；总矛盾率仍 7%（1/14）但换了对象
       （见 bc-0008）；正样本 hallucination 仍 5/5/5、四维均分 4.75/4.75/4.25 未虚降。
-      根因归类与「已修复」判定仍待人工确认（AI 只报实测数字）；人工抽样复批未做，calibration.yaml 待补。
+      v7 续航（reports/baseline-2026-11-14-075449.*）与 v8 两版（160734、161427）里 tc-neg-secrets 的
+      hallucination 三轮都 ≤2，说明治好的口径没被后续改动放回去。
+      根因（evalset，评分标准的例外口径过宽、与一致率指标没对齐）与「已修复」判定已于 2026-11-18
+      由 WL2O2O 签字成立，**本条标 fixed**。人工抽样复批仍未做（calibration.yaml 待补），
+      那属于"裁判可信度"，不影响本条"口径已修好"的结论。
   - id: bc-0008
     case_id: tc-neg-format（v6 实跑 reports/baseline-2026-11-13-233955.*）
     date: 2026-11-13
@@ -204,8 +221,8 @@ entries:
       属评分标准口径问题而非模型随机性；该轮反向可疑 4 项、矛盾率仍 7%（1/14，见 bc-0008）。
     root_cause: evalset
     suggested_by: AI 分析（--judge-agreement 反向可疑明细 + fixtures/neg-priority.md、fixtures/neg-traceability.md 复读）
-    confirmed_by: WL2O2O（2026-11-18，认可 evalset 归因；尚未修好，不标 fixed）
-    status: confirmed
+    confirmed_by: WL2O2O（2026-11-18，认可 evalset 归因；同日复核 v8 实测达标签字标 fixed）
+    status: fixed
     fix_ref: >-
       修法（根因已人工确认，与 bc-0008 合并成一次 v7）：在 hallucination 的例外里补一类
       "抽象指代/占位（账号 A、某用户、用户甲、<账号>、XX 门店）不算虚构凭证，
@@ -224,6 +241,15 @@ entries:
       ——先问这个值能不能被核验、能不能直接拿去登录，不能就属抽象指代；
       同时可考虑把枚举词表换成"凡未给出可核验具体值的指代一律不算虚构"。
       验收仍沿用上面三条（反向可疑归零 + 不再间歇性压分 + tc-neg-secrets 仍 ≤2）。
+      v8 实测（2026-11-18，三次带 key 的 --runs 3，评测集 v8）：
+      ① 仅改措辞那版（reports/baseline-2026-11-18-155846.*）：反向可疑 2、不稳定 2 条——不达标；
+      ② 加"机械事实注入"后（160734、161427 两版）：反向可疑 **0**、稳定性小节 **unstable 为空**、
+      tc-neg-expected-empty/priority 的 hallucination 三轮回到 5、tc-neg-secrets 三轮 ≤2（1~2）。
+      如实补一笔：结论翻转清单仍各有 1 条（160734 是 tc-neg-secrets 1/3 过线、161427 是 tc-neg-coverage
+      2/3 过线，均为均分贴线抖动而非极差 ≥2），"分数波动可复现"只对 hallucination 维度成立。
+      即最后两版满足本条三条验收（反向可疑归零 + 四条 hallucination 不再恒为 1 + tc-neg-secrets 仍 ≤2）；
+      同批报告里上限遵守退化是另一条问题（见 bc-0012），不影响本条验收。
+      2026-11-18 由 WL2O2O 复核达标签字，**本条标 fixed**（证据：160734、161427 两份报告）。
   # ↓ 2026-11-18 跨模型复核（evals/reviews/v7-ai-review.md）发现的两条：AI 起草，根因已由 WL2O2O 确认
   - id: bc-0010
     case_id: tc-1000002-good（v7 实跑 reports/baseline-2026-11-14-075449.*，三轮全复现）
@@ -240,10 +266,16 @@ entries:
     confirmed_by: WL2O2O（2026-11-18，认可 model 归因）
     status: confirmed
     fix_ref: >-
-      根因已人工确认（2026-11-18）；修法建议并入 v8（尚未实现）：
+      根因已人工确认（2026-11-18）；修法并入 v8（已实现，未达标）：
       coverage 声称存在缺口时必须点名"缺哪条用例/哪个分支"，且先陈述产出里已有哪些相关用例再判缺——
-      不得泛泛举例。验收标准：v8 复跑后该理由不得再声称缺"库存批次未开通"分支；
+      不得泛泛举例；同时把"变更点→用例名映射"作为机械事实注入 judge prompt。
+      验收标准：v8 复跑后该理由不得再声称缺"库存批次未开通"分支；
       其余 coverage 理由若出现"未覆盖/缺失"，至少能对上产出里的一个真实缺口。
+      v8 三次带 key 实测（2026-11-18，--runs 3）只达标 1/3：
+      155846（仅措辞）理由写"变更点④的未开通租户报错分支未覆盖"——不达标；
+      160734（注入映射后）coverage 5、理由逐点点名已有用例——达标；
+      161427（再加禁用词）又写"变更点④的库存批次未开启时的报错分支未详细描述"——复发。
+      结论：机械映射能帮上忙，但小模型仍会间歇性无视"先举证"——**未达标，保持 confirmed**。
   - id: bc-0011
     case_id: tc-1020256-executed（v7 实跑 reports/baseline-2026-11-14-075449.*，三轮恒 4）
     date: 2026-11-18
@@ -260,13 +292,45 @@ entries:
     confirmed_by: WL2O2O（2026-11-18，认可 evalset 归因）
     status: confirmed
     fix_ref: >-
-      根因已人工确认（2026-11-18）；修法建议并入 v8（尚未实现）：
+      根因已人工确认（2026-11-18）；修法并入 v8（已实现，未达标）：
       在 consistency 定义里补一句"实际结果列记录的被测产品缺陷、执行数据与截图路径
       不构成用例自身的格式错误"；并明写"判 consistency 前先看规则通道的 format_columns，
-      规则没报列数问题就不得凭空认定列数错误"。
+      规则没报列数问题就不得凭空认定列数错误"。v8 还额外把"列结构：未检出任何列数/表头问题"
+      作为机械事实注入 prompt，并于评审约定 7 禁止在无规则证据时使用"列数/缺列/表头"字样。
       验收标准：v8 复跑后该条 consistency 回到 5 分、理由中不再出现"列数错误"；
       同时 tc-neg-format（真有列数错误）的 consistency 仍 ≤3（不能把 bc-0008 治好的放回去）。
-# 示例（注释，非真实条目）：
+      v8 三次带 key 实测（2026-11-18，--runs 3）：consistency 恒 4，理由分别是
+      "存在列数错误，这是格式问题"（155846）、"存在一处列数错误，未影响内容一致性"（160734）、
+      "部分用例的列数与表头存在轻微差异"（161427）——**0/3 达标**，机械事实+禁用词都没拦住；
+      tc-neg-format 三次恒 3（bc-0008 的上限没被放回去）。保持 confirmed。
+  # ↓ 2026-11-18 v8 三次带 key 实测的副产物：AI 起草，根因待人工确认
+  - id: bc-0012
+    case_id: tc-neg-priority / tc-neg-change-section（v8 实跑 reports/baseline-2026-11-18-161427.*）
+    date: 2026-11-18
+    dimension: consistency / coverage（裁判不执行 CONTRACT_CAPS 上限）
+    phenomenon: >-
+      v8 加"机械事实注入"后，bc-0009/bc-0010 依赖的反向可疑与虚构误判确有改善，
+      但同批报告里上限遵守退化了：矛盾率 v7 是 0%（0/14），v8 三次依次 0/14、1/14、2/14。
+      最刺眼的是 tc-neg-priority：consistency 给 4 分（规则通道报了"行2 优先级'P5'非法"，
+      上限 ≤3），而裁判理由自己写着"但优先级列中出现了非法值'P5'"——事实承认了、上限没执行；
+      另一项 tc-neg-change-section 的 coverage 给 4（规则报案"缺少变更点说明"，上限 ≤3）。
+      即裁判的"读事实"能力被机械事实扶起来了，"守上限"这条元规则反而被稀释：
+      同一份 prompt 里既要求"以规则通道结论为准"，又塞进了大段事实与禁用词，
+      小模型把注意力放到了复述事实、忘了上限映射。
+    root_cause: model
+    suggested_by: AI 分析（2026-11-18，三份 v8 报告的 --judge-agreement 明细逐条比对）
+    confirmed_by: WL2O2O（2026-11-18，认可 model 归因）
+    status: confirmed
+    fix_ref: >-
+      根因已确认（2026-11-18，WL2O2O 认定 model：v8 已把口径写清并注入事实，剩下是小模型不执行元规则）；
+      修法未实施，故保持 confirmed。
+      候选修法（待排期）：① 不再靠 prompt 教上限，改由 evaluate.py 在拿到裁判分数后
+      程序化截断（score = min(score, cap)），并在报告里标注"已按规则上限截断"——
+      机械约束交给代码，裁判只出原始判断；② 或把上限表压成 prompt 末尾单独一段短句（一行一条），
+      避免与长事实段抢注意力；③ 换更强的裁判模型（成本换服从度）。
+      验收标准（可量化）：v9 复跑后矛盾率回到 0/14 且连续两轮复现、bc-0009/0010 的改善不回退
+      （反向可疑仍 0、coverage 不再编缺口）、tc-neg-format 的 consistency 仍 ≤3。
+      修法落地并有带 key 实测证据前，本条不得改 fixed。
 # - id: bc-0001
 #   case_id: tc-1000001-good
 #   date: 2026-11-11

@@ -5,7 +5,7 @@
 覆盖九块，全部零 key、离线、秒级：
 1. 用例表解析（parse_case_tables）：表头识别 / 分隔行 / 空行终止 / 多表合并
 2. 规则边界（rule_check）：8 条规则各自的触发与不触发边界（含正则边界：
-   admin\\d{3,}、内网 IP 段 172.16-31、跳转引用四种写法）
+   admin\\d{3,}、内网 IP 段 172.16-31、跳转引用含"执行TC1操作"这类跨用例引用）
 3. 扫描逻辑（scan_repo）：无用例表的 MD 跳过 / 6 项结构规则过滤 / 不存在的根静默跳过
 4. 评测集完整性：cases.yaml / badcases.yaml / calibration.yaml 结构与枚举值校验，
    引用文件存在性
@@ -123,11 +123,28 @@ class TestRuleCheck:
     @pytest.mark.parametrize("field_text,fires", [
         ("见上", True), ("同上", True), ("参见附录A", True),
         ("见 第2节", True), ("见：需求原文", True),
+        # 跨用例引用（bc-0006）：把前置条件/步骤寄托在另一条用例上
+        ("执行TC1操作", True), ("执行 TC3 操作", True), ("参考用例2", True),
+        ("参照用例3", True), ("复用用例 12 的前置条件", True), ("沿用TC-7", True),
+        ("见用例2", True), ("同TC3 的前置条件", True), ("参见TC2", True),
+        # 边界：编号标识后面必须跟编号；"执行 XX 操作"本身是正常动作
         ("已登录商城后台", False), ("独立可读的完整步骤", False),
+        ("执行导出操作", False), ("执行登录", False), ("执行提交流程", False),
+        ("执行用例设计", False), ("不同用例的公共前置", False),
     ])
     def test_jump_ref_boundary(self, field_text, fires):
         v, _ = evaluate.rule_check(make_table(clean_row(steps=field_text)), [])
         assert bool(v["no_jump_refs"]) is fires
+
+    def test_cross_case_jump_ref_checked_in_both_table_paths(self):
+        # bc-0006：标准 9 列表与表头漂移兜底路径都要能检出，且报对字段名
+        v, _ = evaluate.rule_check(make_table(clean_row(pre="执行TC1操作")), [])
+        assert v["no_jump_refs"] == ["行1 前置条件含跳转引用"]
+        v, _ = evaluate.rule_check(make_drift_table(drift_row(pre="执行TC1操作")), [])
+        assert v["no_jump_refs"] == ["行1 前置条件含跳转引用"]
+        for kw in ("pre", "steps", "exp"):
+            v, _ = evaluate.rule_check(make_table(clean_row(**{kw: "参考用例2"})), [])
+            assert v["no_jump_refs"], "字段 %s 未被检查" % kw
 
     @pytest.mark.parametrize("field_text,fires", [
         ("输入 密码: abc123", True), ("输入 密码：abc", True),
@@ -294,6 +311,17 @@ class TestAbDemoArtifacts:
         v, _ = evaluate.rule_check((b / "tc-1020256-executed.md").read_text(encoding="utf-8"), [])
         assert any("'中'" in m for m in v["priority_valid"])
 
+    def test_variant_b_cross_case_jump_refs_now_flagged(self):
+        # bc-0006 锚点：v4 轮 B 产出的这份有 4 行前置条件写「执行TC1操作」，
+        # 旧 JUMP_RE 只认"见/同上/参见"，整份 no_jump_refs 仍显示合规。
+        # 现在必须逐行检出，且行号与表内序号对得上（行2~行5）。
+        b = self.AB / "b" / self.V4_B
+        text = (b / "tc-1020256-executed.md").read_text(encoding="utf-8")
+        assert text.count("执行TC1操作") == 4
+        v, _ = evaluate.rule_check(text, [])
+        hits = sorted(m for m in v["no_jump_refs"] if "前置条件" in m)
+        assert hits == ["行%d 前置条件含跳转引用" % i for i in (2, 3, 4, 5)]
+
     def test_variant_a_outputs_are_clean(self):
         snaps = self.snapshots("a")
         assert snaps, "缺 A/B 演示产物：先跑 bash evals/ab-demo.sh"
@@ -405,6 +433,33 @@ class TestEvalsetIntegrity:
             assert e["agreed"] <= e["sample_size"]
             assert e["agreement"] == pytest.approx(e["agreed"] / e["sample_size"])
 
+    def test_cal_0003_records_human_item_by_item_review(self):
+        # v8 的 161427 由本人在对话中逐项复批（不是 AI 复核、也不是抽检背书）：
+        # 分数级 12/14，严格级 8/14——两级必须同时落盘，防止有人只引用 85.7%
+        cal = yaml.safe_load((EVAL_DIR / "calibration.yaml").read_text(encoding="utf-8"))
+        e = next(x for x in cal["entries"] if x["id"] == "cal-0003")
+        assert (e["sample_size"], e["agreed"]) == (14, 12)
+        assert "161427" in e["scope"]
+        assert "逐项" in e["reviewer"] and "WL2O2O" in e["reviewer"]
+        assert "严格级" in e["note"] and "8/14" in e["note"]
+        assert "定向抽样" in e["note"]
+
+    def test_cal_0004_is_labeled_authorized_batch_not_human_review(self):
+        # 十三份的"授权口径代批"：数字必须落盘，但 reviewer/note 必须写明 AI 代判、本人未逐项阅读——
+        # 防止日后被引用成"人工逐项复批"（这 212 项是授权 + 口径，不是人读的）
+        cal = yaml.safe_load((EVAL_DIR / "calibration.yaml").read_text(encoding="utf-8"))
+        e = next(x for x in cal["entries"] if x["id"] == "cal-0004")
+        assert (e["sample_size"], e["agreed"]) == (212, 171)
+        assert "代批" in e["reviewer"] and "未逐项阅读" in e["reviewer"]
+        assert "WL2O2O" in e["reviewer"]
+        assert "不是人工逐项复批" in e["note"] and "372" in e["note"]
+        assert "严格级" in e["note"] and "146/212" in e["note"]
+        assert "不可混算" in e["note"]
+        # 明细必须和汇总对得上：审计文件里的合计行写死 212/41/17/8，改数字就得同时改两处
+        audit = (EVAL_DIR / "reviews/corpus-audit-2026-11-18.md").read_text(encoding="utf-8")
+        assert "可核对 212，不认可 41，反向可疑 17，编造举证 8" in audit
+        assert "不是人工逐项阅读" in audit and "372" in audit
+
 
 # ---------- 5. 判别力与正样本保证（与退出码语义一致） ----------
 
@@ -465,7 +520,7 @@ class TestJudgeRubric:
         # 评分标准变了就得升版本（三件套：升版本 + 重跑基线 + 重新校准）
         assert jcfg is not None
         meta = yaml.safe_load((EVAL_DIR / "cases.yaml").read_text(encoding="utf-8"))["meta"]
-        assert meta["version"] >= 7
+        assert meta["version"] >= 8
 
     def test_coverage_defers_mechanical_check_to_rules(self):
         # v5：coverage 不再让裁判自己拆清单/数覆盖，只评场景充分性与粒度（bc-0005 治疗）
@@ -517,6 +572,27 @@ class TestJudgeRubric:
         p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg)
         assert "未登记" in p and "自行从需求原文拆出清单" in p
 
+    def test_judge_prompt_injects_machine_facts(self, jcfg):
+        # v8：规则通道"确认没问题"也要当事实注入，否则裁判照样编列数错误/编缺口
+        p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg, points=["① a"],
+                                        facts=["列结构：未检出任何列数/表头问题（用例表为标准 9 列）"])
+        assert "【规则通道确认无问题的机械事实" in p
+        assert "未检出任何列数/表头问题" in p and "不可推翻" in p
+
+    def test_machine_facts_declare_clean_format_mapping_and_abstract_refs(self):
+        text = make_table(clean_row(ref="①②", pre="使用账号 A 登录"), clean_row(ref="②"))
+        v, _ = evaluate.rule_check(text, ["①", "②"])
+        facts = " ".join(evaluate.machine_facts(text, v, ["① 入口", "② 打码"]))
+        assert "未检出任何列数/表头问题" in facts
+        assert "变更点① 已被这些用例引用" in facts and "《提交订单成功》" in facts
+        assert "账号 A" in facts and "不是虚构凭证" in facts
+
+    def test_machine_facts_silent_about_format_when_rules_report_it(self):
+        v = {r: [] for r in evaluate.RULES}
+        v["format_columns"] = ["行1 列数8≠9"]
+        facts = " ".join(evaluate.machine_facts(make_table(clean_row()), v, []))
+        assert "未检出任何列数" not in facts
+
     def test_judge_forwards_checklist_and_findings(self, jcfg, monkeypatch):
         # 真联网跑不了，但 prompt 拼装必须带上清单与规则结论：截住 llm_chat 看它收到什么
         seen = {}
@@ -532,10 +608,11 @@ class TestJudgeRubric:
         assert "变更点①未被任何用例覆盖" in seen["prompt"]
 
     def test_main_wires_change_points_from_evalset(self):
-        # 防回归：主流程必须从 cases.yaml 的 change_points 取清单、并把违规明细传给裁判
+        # 防回归：主流程必须从 cases.yaml 的 change_points 取清单、并把违规明细与机械事实传给裁判
         src = inspect.getsource(evaluate.main)
         assert 'cfg.get("change_points")' in src
         assert "points, findings" in src
+        assert "machine_facts(" in src and "args.runs, facts" in src
 
     def test_judge_prompt_carries_dims_and_conventions(self, jcfg):
         p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg)
@@ -549,22 +626,27 @@ class TestJudgeRubric:
     def test_rubric_change_is_documented(self):
         bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
         e4 = next(x for x in bc["entries"] if x["id"] == "bc-0004")
-        assert e4["status"] in ("confirmed", "fixed") and e4["confirmed_by"]
+        assert e4["status"] == "fixed" and e4["confirmed_by"]
         assert "v3 → v4" in e4["fix_ref"]
-        # v5 治疗（bc-0005）必须已人工确认方向，且如实写明"待 key 复跑验证"
+        # v4 首轮未达标、v5 同一验收达标，两段证据都必须落盘（不许只写"已修复"）
+        assert "221550" in e4["fix_ref"] and "1/2/2" in e4["fix_ref"]
+        # v5 治疗（bc-0005）同样标 fixed，且如实写明首轮残留的 1 项矛盾（不许写成全部归零）
         e5 = next(x for x in bc["entries"] if x["id"] == "bc-0005")
-        assert e5["confirmed_by"] and e5["status"] in ("confirmed", "fixed")
-        assert "v4 → v5" in e5["fix_ref"] and "待" in e5["fix_ref"]
+        assert e5["confirmed_by"] and e5["status"] == "fixed"
+        assert "v4 → v5" in e5["fix_ref"] and "2.75" in e5["fix_ref"]
+        assert "1/28" in e5["fix_ref"] and "bc-0007" in e5["fix_ref"]
 
     def test_v6_verification_and_human_confirmation_are_recorded(self):
-        # bc-0007 的 v6 实测数字必须落盘，但根因还没人工确认 → 保持 open；
+        # bc-0007 的 v6 实测数字必须落盘；2026-11-18 根因与「已修复」判定由 WL2O2O 签字 → fixed，
+        # 但"人工抽样复批未做"这句必须留在条内（fixed 说的是口径修好，不是裁判被验证可信）；
         # bc-0008/bc-0009 的根因已由 WL2O2O 确认：前者四条验收全达标标 fixed，
         # 后者只达标一半，只能标 confirmed（不许把"半治好"写成 fixed）
         bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
         by_id = {x["id"]: x for x in bc["entries"]}
         e7 = by_id["bc-0007"]
         assert "233955" in e7["fix_ref"] and "5 → 2" in e7["fix_ref"]   # 实测证据落盘
-        assert e7["status"] == "open" and e7["confirmed_by"] is None     # 人工没确认就不许标 fixed
+        assert e7["status"] == "fixed" and "WL2O2O" in e7["confirmed_by"]
+        assert "标 fixed" in e7["fix_ref"] and "人工抽样复批仍未做" in e7["fix_ref"]
         assert e7["root_cause"] == "evalset" and e7["dimension"].startswith("hallucination")
         assert "v5 → v6" in e7["fix_ref"]
 
@@ -576,12 +658,36 @@ class TestJudgeRubric:
         assert "验收标准" in e8["fix_ref"]
 
         e9 = by_id["bc-0009"]
-        assert e9["status"] == "confirmed" and "WL2O2O" in e9["confirmed_by"]
+        # 2026-11-18 v8 复核后由 WL2O2O 签字标 fixed：三条验收在注入机械事实后达成（160734/161427）
+        assert e9["status"] == "fixed" and "WL2O2O" in e9["confirmed_by"]
         assert e9["root_cause"] == "evalset" and "tc-neg-priority" in e9["case_id"]
         assert "hallucination" in e9["dimension"]
         assert "只达标一半" in e9["fix_ref"] and "075449" in e9["fix_ref"]
+        assert "161427" in e9["fix_ref"] and "标 fixed" in e9["fix_ref"]
         # bc-0009 是 v6 收紧后的过度纠正：修法不得把 bc-0007 治好的又放回去
         assert "仍 ≤2" in e9["fix_ref"]
+
+    def test_2026_11_18_confirmations_are_recorded(self):
+        # 人工确认制的现场记录：bc-0006（evaluator 漏检成立）与 bc-0012（v8 上限退化）同一天签字
+        bc = yaml.safe_load((EVAL_DIR / "badcases.yaml").read_text(encoding="utf-8"))
+        by_id = {x["id"]: x for x in bc["entries"]}
+        e6 = by_id["bc-0006"]
+        assert e6["status"] == "fixed" and "WL2O2O" in e6["confirmed_by"]
+        assert e6["root_cause"] == "evaluator"
+        assert "CROSS_CASE_RE" in e6["fix_ref"] and "标 fixed" in e6["fix_ref"]
+        e12 = by_id["bc-0012"]
+        # 根因认 model，但修法未落地 → 只能 confirmed，不许写 fixed
+        assert e12["status"] == "confirmed" and "WL2O2O" in e12["confirmed_by"]
+        assert e12["root_cause"] == "model"
+        assert "score = min(score, cap)" in e12["fix_ref"]
+        assert "不得改 fixed" in e12["fix_ref"]
+        # bc-0010 / bc-0011 本轮维持 confirmed（用户 2026-11-18 决定保持）
+        for cid in ("bc-0010", "bc-0011"):
+            assert by_id[cid]["status"] == "confirmed", cid
+        # bc-0007 是最后一条 open 的：签字后 badcases 里不再有 open 项
+        assert [x["id"] for x in bc["entries"] if x["status"] == "open"] == []
+        e7 = by_id["bc-0007"]
+        assert e7["status"] == "fixed" and "WL2O2O" in e7["confirmed_by"]
 
     def test_fixed_entries_always_carry_human_confirmation(self):
         # 人工确认制的硬约束：任何 confirmed/fixed 条目都必须有 confirmed_by，
@@ -606,9 +712,35 @@ class TestJudgeRubric:
     def test_hallucination_placeholder_exception_is_narrow(self):
         # v5 的宽例外（"标注为示例/占位的测试账号不算虚构"）正是裁判放过虚构凭证的口子
         d = evaluate.DIM_DEFS["hallucination"]
-        assert "例外只有两类" in d and "占位标记" in d
+        assert "占位标记" in d
         assert "不算标注" in d and "仍按虚构计" in d
         assert "测试账号" in d   # 必须点名这种写法
+        # v8（bc-0009 复发）：例外改成判定动作，词表只当举例——不背词表也不放过具体值
+        assert "做两个动作" in d and "能不能被核验" in d
+        assert "哪怕前面写着" in d
+
+    def test_v8_coverage_gap_claims_need_evidence(self):
+        # bc-0010：裁判把产出里已经写了的"库存批次未开通"分支说成缺失（model 稳定误读）。
+        # 修法不是在词表里加一句，而是强制举证顺序：先点名已有的用例/场景，再说缺什么
+        d = evaluate.DIM_DEFS["coverage"]
+        assert "声称缺口之前必须先举证" in d
+        assert "点名用例编号或名称" in d
+        assert "不得声称缺口" in d
+        assert "不得把一条已经写在产出里的场景说成" in d
+
+    def test_v8_consistency_distinguishes_product_defects(self):
+        # bc-0011：裁判把「实际结果」列记录的产品缺陷（导出表头文案错）当成用例的列数错误
+        d = evaluate.DIM_DEFS["consistency"]
+        assert "实际结果」列" in d and "不构成用例自身的格式错误" in d
+        assert "format_columns" in d and "不得凭空认定" in d
+        # 不能把 bc-0008 治好的契约上限放回去
+        assert "不得高于 3" in d
+
+    def test_v8_conventions_state_new_rules(self, jcfg):
+        p = evaluate.build_judge_prompt("需求原文X", "用例产出Y", jcfg, points=["① a"])
+        assert "能不能被核验" in p                      # 约定 5
+        assert "点名编号或名称" in p                     # 约定 6
+        assert "format_columns" in p and "不是用例自身的格式错误" in p   # 约定 7
 
     def test_hallucination_exempts_abstract_references(self):
         # v7（bc-0009 治疗）：抽象指代不算虚构凭证——否则四条负向对照被稳定误判成 1 分
@@ -777,6 +909,45 @@ class TestDiffReports:
         lines, reg, imp = evaluate.diff_reports(old, new)
         assert any("hallucination" in x and "判退步" in x for x in reg)
 
+    def test_negative_control_judge_drop_is_note_not_regression(self):
+        # backlog #14：负向对照故意写坏，裁判给它降分不是被测产出退步。
+        # 真实案例：同一评测集 v6 相隔 40 分钟两跑，tc-neg-jump-refs 的 hallucination 5 → 1
+        # 被旧逻辑判退步，把正样本的真退步淹掉了。
+        old = base_report([base_case(cid="tc-neg", kind="negative-control",
+                                     verdict="detected", judge=judge_scores())],
+                          mode="offline+judge")
+        new = base_report([base_case(cid="tc-neg", kind="negative-control",
+                                     verdict="detected", judge=judge_scores(hallucination=1))],
+                          mode="offline+judge")
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and imp == []
+        assert any("tc-neg / Judge hallucination：5 → 1" in x and "负向对照" in x for x in lines)
+
+    def test_negative_control_judge_rise_is_not_improvement(self):
+        # 反向同理：裁判对负向样本"看走眼"给高分，也不该记成变好（判别力由规则通道负责）
+        old = base_report([base_case(cid="tc-neg", kind="negative-control",
+                                     verdict="detected", judge=judge_scores(hallucination=1))],
+                          mode="offline+judge")
+        new = base_report([base_case(cid="tc-neg", kind="negative-control",
+                                     verdict="detected", judge=judge_scores())],
+                          mode="offline+judge")
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert reg == [] and imp == []
+        assert any("负向对照" in x and "1 → 5" in x for x in lines)
+
+    def test_negative_control_rule_channel_still_counts(self):
+        # 只豁免 Judge 分数；负向对照的规则结论/漏检判定必须照常记账
+        old = base_report([base_case(cid="tc-neg", kind="negative-control", verdict="detected",
+                                     violations={"no_jump_refs": ["行1 前置条件含跳转引用"]},
+                                     judge=judge_scores(hallucination=1))],
+                          mode="offline+judge")
+        new = base_report([base_case(cid="tc-neg", kind="negative-control", verdict="detected",
+                                     violations={}, judge=judge_scores())],
+                          mode="offline+judge")
+        lines, reg, imp = evaluate.diff_reports(old, new)
+        assert any("违规消除" in x for x in imp), "规则通道的违规消除仍应记变好"
+        assert not any("Judge" in x for x in imp), "Judge 分数变化不许混进变好"
+
     def test_judge_score_up_is_improvement(self):
         old = base_report([base_case(judge=judge_scores(coverage=4))], mode="offline+judge")
         new = base_report([base_case(judge=judge_scores())], mode="offline+judge")
@@ -850,6 +1021,11 @@ V5_B_REPORT = "ab-demo/b/baseline-2026-11-13-221550.json"
 V6_REPORT = "reports/baseline-2026-11-13-233955.json"
 V6_RUNS3_REPORT = "reports/baseline-2026-11-14-001756.json"   # v6 + --runs 3 真实稳定性产物
 V7_RUNS3_REPORT = "reports/baseline-2026-11-14-075449.json"   # v7 + --runs 3：矛盾率首次归零
+V8_RUNS3_REPORTS = (                                           # v8 三次逐次加料（措辞 → 事实 → 禁用词）
+    "reports/baseline-2026-11-18-155846.json",
+    "reports/baseline-2026-11-18-160734.json",
+    "reports/baseline-2026-11-18-161427.json",
+)
 
 
 class TestJudgeAgreement:
@@ -1330,3 +1506,32 @@ class TestJudgeStability:
         v7 = json.loads((EVAL_DIR / V7_RUNS3_REPORT).read_text(encoding="utf-8"))
         assert evaluate.judge_agreement(v7["cases"])["contradictions"] == 0
         assert evaluate.CONTRACT_CAPS["format_columns"] == [("consistency", 3)]  # 口径未动
+
+    def test_real_v8_runs3_reports_record_the_tradeoff(self):
+        # v8 三次带 key 实测（逐次加料）：只改措辞 → 加机械事实 → 再加禁用词。
+        # 这条把"部分达标 + 新代价"钉在测试里，防止文档把 v8 写成全面治好：
+        #   ① 事实注入确实治好了 bc-0009 依赖的反向可疑（2 → 0），也帮 bc-0010 一次拿回 coverage 5；
+        #   ② 但上限遵守反而退化（矛盾 0 → 1 → 2），bc-0011 三次都 4 分，bc-0010 在第三版复发。
+        reps = [json.loads((EVAL_DIR / p).read_text(encoding="utf-8"))
+                for p in (V8_RUNS3_REPORTS)]
+        for rep in reps:
+            assert rep["evalset_version"] == 8 and rep["judge_stability"]["runs"] == 3
+        aggs = [evaluate.judge_agreement(r["cases"]) for r in reps]
+        assert [a["checkable"] for a in aggs] == [14, 14, 14]
+        assert [a["contradictions"] for a in aggs] == [0, 1, 2]        # 上限被稀释
+        assert [len(a["strict_flags"]) for a in aggs] == [2, 0, 0]     # 反向可疑被治好
+        by = [{c["id"]: c for c in r["cases"]} for r in reps]
+        # bc-0011：产品缺陷被当格式错误，三次都是 4 分（0/3 达标）
+        assert all(b["tc-1020256-executed"]["judge"]["consistency"]["score"] == 4 for b in by)
+        # bc-0010：加事实那版 coverage 5，再加禁用词后又掉到 4
+        assert [b["tc-1000002-good"]["judge"]["coverage"]["score"] for b in by] == [4, 5, 4]
+        # bc-0009：事实注入后 hallucination 三轮回 5，且 bc-0007 没被放回去
+        for b in by[1:]:
+            assert b["tc-neg-priority"]["stability"]["dimensions"]["hallucination"]["values"] == [5, 5, 5]
+            assert b["tc-neg-secrets"]["stability"]["dimensions"]["hallucination"]["max"] <= 2
+        # 最关键的一条：第三版既达到了"反向可疑 0"，又退化了"上限遵守"——
+        # 以后若有人只引用 0 这个数字，这条断言会提醒他同份报告还有 2 项矛盾
+        assert len(aggs[2]["strict_flags"]) == 0 and aggs[2]["contradictions"] == 2
+        assert any(i["case"] == "tc-neg-priority" and i["dimension"] == "consistency"
+                   and i["score"] == 4 and i["cap"] == 3 for i in aggs[2]["items"])
+        assert any("'P5'" in i["reason"] for i in aggs[2]["items"])

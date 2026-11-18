@@ -1,0 +1,32 @@
+{
+  "date": "2026-11-18",
+  "generated_at": "2026-11-18T16:23:45",
+  "mode": "scan",
+  "roots": [
+    "workspace/testcases",
+    "examples",
+    "demo"
+  ],
+  "files": [
+    {
+      "path": "workspace/testcases/sprint100/demo1.md",
+      "rows": 11,
+      "violations": {}
+    },
+    {
+      "path": "examples/sample-testcase.md",
+      "rows": 7,
+      "violations": {}
+    },
+    {
+      "path": "demo/1000002-PC后台账户列表系统配置增加入库打码功能.md",
+      "rows": 14,
+      "violations": {}
+    }
+  ],
+  "aggregates": {
+    "files_scanned": 3,
+    "files_violating": 0,
+    "exit_ok": true
+  }
+}

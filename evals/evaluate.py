@@ -53,7 +53,13 @@ ROOT = EVAL_DIR.parent
 RULES = ["format_columns", "priority_valid", "traceability", "no_jump_refs",
          "expected_non_empty", "no_secrets", "change_section", "coverage"]
 
-JUMP_RE = re.compile(r"(见上|参见|同上|见\s|见：)")
+# 跳转引用 = 用例自身不可独立阅读。除了"见上/同上/参见"这类词面写法，
+# 还有一类更隐蔽的跨用例引用：把前置条件或步骤寄托在另一条用例上（"执行TC1操作"）。
+# 2026-11-18 补 bc-0006：B 变体产出里这种写法 rule 通道漏检、no_jump_refs 仍报 100%。
+# 边界：编号标识（用例/TC/Case）后面必须跟编号才算；"执行导出操作""执行登录"是正常动作，不能误伤。
+CROSS_CASE_RE = (r"(?:(?<![不])同|执行|参考|参照|复用|沿用|见)\s*"
+                 r"(?:用例|TC|Case|case)\s*[-#]?\s*\d+")
+JUMP_RE = re.compile(r"(见上|参见|同上|见\s|见：|" + CROSS_CASE_RE + ")")
 SECRET_RE = re.compile(r"(密码[:：]\s*\S+|admin\d{3,}|http://(?:10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.))")
 
 # 失败规则 → 建议根因（人工确认后才算数，见 evals/README.md 根因 taxonomy）
@@ -71,6 +77,12 @@ SUGGESTED_ROOT_CAUSE = {
 # 2026-11-13 v4 实跑验证未达标（裁判把核对动作演出来但结论是编的、上限压不住，见 bc-0005）：
 # 改为"机械事实不让裁判自己算"——变更点清单由评测集注入（不再让裁判自己拆），
 # 规则通道已检出的违规作为既定事实注入（裁判不得否认），coverage 只评粒度/边界/异常充分性。
+# 2026-11-18 v8 三处措辞（bc-0009 / bc-0010 / bc-0011）：
+# ① hallucination 例外从"背词表"改成"判定动作"——拿这个值能不能直接登录/访问/定位到真实记录？
+#   词表只当举例，避免裁判把"账号 A"这类抽象指代当成虚构、又避免放过具体可核验的凭证；
+# ② coverage 声称缺口前必须先举证已有哪些用例，堵住"编造缺口"（bc-0010：库存批次分支其实在产出里）；
+# ③ consistency 明确「实际结果」列记录的产品缺陷/执行数据不是用例自身的错误，
+#   判列数/表头前先看规则通道的 format_columns（bc-0011）。
 DIM_DEFS = {
     "coverage": (
         "覆盖充分性：本次需求的变更点清单已在下方【变更点清单】给出，"
@@ -83,6 +95,10 @@ DIM_DEFS = {
         "2=多数变更点只有一条笼统用例，粒度不足以指导执行；1=用例过于笼统或与需求脱节。"
         "reason 必须写出你核对到的具体缺口（例如\"变更点②只写了成功路径，缺未开通租户的报错分支\"），"
         "禁止只写\"覆盖全面\"这类结论性套话。"
+        "**声称缺口之前必须先举证**（v8，bc-0010）：先在产出里把该变更点的对应用例找一遍，"
+        "写出它**已经覆盖了哪些场景（点名用例编号或名称）**，再写还缺哪个具体场景；"
+        "找不到「该场景确实没写」的证据就不得声称缺口，更不得把一条已经写在产出里的场景说成\"缺失\"。"
+        "要求点名的对象是\"哪条用例 / 哪个分支\"，泛泛举例不算证据。"
     ),
     "relevance": "相关性：每条用例是否直接对应需求中的功能点或规则。5=全部直接相关",
     "consistency": (
@@ -94,8 +110,13 @@ DIM_DEFS = {
         "（例如\"存在列数错误，但这是格式问题\"）同样算违约。"
         "只要其中存在任一条契约违背（列数漂移、P3 或\"高/中/低\"、\"同上/见上文/参见\"、"
         "缺关联引用列），本维度不得高于 3；没有契约违背时才按语义一致性给 4-5。"
+        "**反过来也别把产品缺陷记成用例的错**（v8，bc-0011）：用例「实际结果」列记录的是执行阶段的"
+        "被测产品缺陷、执行数据或截图路径（例如\"导出表头文案仍是旧文案\"、\"见附件截图\"），"
+        "那是产品的问题或执行证据，**不构成用例自身的格式错误或内容不一致**，不得据此降分；"
+        "判列数/表头/字段错位之前先看【规则通道已检出的确定性违规】里的 format_columns——"
+        "规则通道没报列数问题，就不得凭空认定\"列数错误\"。"
     ),
-    "hallucination": "无幻觉程度：是否虚构需求原文里不存在的事实。**先看【规则通道已检出的确定性违规】里有没有 no_secrets**：只要那里列出\"含虚构凭证/内网地址\"，本维度不得高于 2，且 reason 必须承认该行事实（写\"未虚构\"\"无幻觉\"即为不合格理由）。判定口径：需求原文没给出的账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名，被写进前置条件、操作步骤或预期结果，就算虚构。例外只有两类：（1）值本身带明显占位标记（尖括号占位符、\"示例\"、\"待补充\"、\"XXX\"、\"脱敏\"）；（2）**抽象指代而非具体值**——\"账号 A\"、\"某用户\"、\"用户甲\"、\"XX 门店\"、\"N 次\"、\"X 分钟\"这类没编造任何可核验事实的写法不算虚构凭证，不得据此把本维度压到 3 分以下。但抽象指代后面一旦跟了具体账号名/明文密码/IP/域名/库表名，就仍按虚构计（\"使用测试账号 adminNNN、密码: 明文\"正是 AI 编造凭证的典型特征，写\"测试账号\"四个字不算标注）。分数上限：5=完全没有需求外的事实；4=仅 1 处未标注的可疑数据且不影响执行；3=2 处以上可疑数据，或编造了需求里没有的功能/字段/规则；2=规则通道已检出 no_secrets，或出现明确的虚构凭证/内网地址；1=大面积虚构、用例无法照做。reason 必须落到具体行与具体值（哪一行、哪个值、需求原文里没有）；只写抽象指代而给低分，理由不成立。",
+    "hallucination": "无幻觉程度：是否虚构需求原文里不存在的事实。**先看【规则通道已检出的确定性违规】里有没有 no_secrets**：只要那里列出\"含虚构凭证/内网地址\"，本维度不得高于 2，且 reason 必须承认该行事实（写\"未虚构\"\"无幻觉\"即为不合格理由）。判定口径：需求原文没给出的账号、密码、token、内网 IP/域名、URL、库表名、具体人名/门店名，被写进前置条件、操作步骤或预期结果，就算虚构。判断是不是虚构**做两个动作，不要背词表**（v8，bc-0009）：（1）值本身带明显占位标记（尖括号占位符、\"示例\"、\"待补充\"、\"XXX\"、\"脱敏\"）→ 不算虚构；（2）否则拿这个值问一句：**能不能直接拿去登录、访问或定位到一条真实记录？** 不能（\"账号 A\"、\"某用户\"、\"用户甲\"、\"XX 门店\"、\"N 次\"、\"X 分钟\"这类抽象指代，没编造任何可核验事实）→ 不算虚构凭证，不得据此把本维度压到 3 分以下；能（是具体的账号名、密码、token、IP、域名、URL、库表名）→ 算虚构。**词表只是举例，判断标准是\"能不能被核验\"而不是\"在不在词表里\"**：不在词表里的抽象写法（如\"测试账号一\"\"用户乙\"）同样不算虚构；反过来只要是一个具体可登录的值，哪怕前面写着\"测试账号\"四个字也一样算虚构。抽象指代后面一旦跟了具体账号名/明文密码/IP/域名/库表名，就仍按虚构计（\"使用测试账号 adminNNN、密码: 明文\"正是 AI 编造凭证的典型特征，写\"测试账号\"不算标注）。分数上限：5=完全没有需求外的事实；4=仅 1 处未标注的可疑数据且不影响执行；3=2 处以上可疑数据，或编造了需求里没有的功能/字段/规则；2=规则通道已检出 no_secrets，或出现明确的虚构凭证/内网地址；1=大面积虚构、用例无法照做。reason 必须落到具体行与具体值（哪一行、哪个值、需求原文里没有）；只写抽象指代而给低分，理由不成立。",
 }
 
 
@@ -140,6 +161,53 @@ def is_standard_header(header):
 
 
 CHANGE_POINT_CHARS = "①②③④⑤⑥⑦⑧⑨⑩"
+
+# 产出里的抽象指代（机器提取，用于告诉裁判"这些不是虚构凭证"，v8）
+ABSTRACT_REF_RE = re.compile(r"(账号\s*[A-Z甲乙丙丁]|某用户|用户\s*[甲乙丙丁]|XX\s*门店|N\s*次|X\s*分钟)")
+
+
+def machine_facts(output, violations, points=None):
+    """规则通道**确认无问题**的机械事实，写成条目注入 judge prompt（v8）。
+
+    动机：v8 首跑证明"只加措辞"压不住编造——bc-0011 在规则通道零 format_columns 的情况下
+    照样写"存在列数错误"，bc-0010 照样把产出里已写好的分支说成"未覆盖"。
+    所以把机器已经查明的事情也当成既定事实给它（v5"机械事实不让裁判自己算"的延伸）：
+      - 列结构：只有 format_columns 没报时才声称"无列数/表头问题"；
+      - 变更点→用例：按「关联引用」把每个变更点被哪些用例引用列出来，便于它点名举证；
+      - 抽象指代：把产出里出现的"账号 A/某用户"这类词原样列出来，明说不是虚构证据。
+    """
+    facts = []
+    if not violations.get("format_columns"):
+        facts.append("列结构：未检出任何列数/表头问题（用例表为标准 9 列）——"
+                     "这是机器核对结果，reason 里不得出现\"列数/缺列/表头/表格结构\"这些说法")
+    mapping = {}
+    for header, rows in parse_case_tables_with_headers(output):
+        idx = {name: n for n, name in enumerate(header)}
+        nref, nname = idx.get("关联引用"), idx.get("用例名称", idx.get("测试项"))
+        if nref is None or nname is None:
+            continue
+        for r in rows:
+            ref = r[nref] if nref < len(r) else ""
+            name = r[nname] if nname < len(r) else ""
+            for ch in ref:
+                if ch in CHANGE_POINT_CHARS and name:
+                    names = mapping.setdefault(ch, [])
+                    if name not in names:
+                        names.append(name)
+    for p in points or []:
+        sym = p[0]
+        if sym in mapping:
+            facts.append("变更点%s 已被这些用例引用：%s（声称该点缺场景前先对照它们）"
+                         % (sym, "、".join("《%s》" % n for n in mapping[sym])))
+    refs = []
+    for m in ABSTRACT_REF_RE.finditer(output):
+        v = re.sub(r"\s+", " ", m.group(0))
+        if v not in refs:
+            refs.append(v)
+    if refs:
+        facts.append("产出中的抽象指代（机器提取，不是虚构凭证，不得据此压分）：%s"
+                     % "、".join(refs))
+    return facts
 
 
 def rule_check(text, expected_points):
@@ -322,6 +390,10 @@ def _diff_baseline(old, new):
             reg += ["%s / %s 新增违规：%s" % (cid, rule, m) for m in sorted(nv - ov)]
             imp += ["%s / %s 违规消除：%s" % (cid, rule, m) for m in sorted(ov - nv)]
         oj, nj = o.get("judge"), n.get("judge")
+        # 负向对照是故意写坏的样本：裁判给它降分/升分都不反映被测产出质量，
+        # 判别力由规则通道的 detected/MISSED 负责（结论变化仍按退步/变好算）。
+        # 如果也拿 Judge 分数判退步，一条负向样本的裁判抖动就足以淹没真正的正样本退步（backlog #14）。
+        neg = "negative-control" in (o.get("kind"), n.get("kind"))
         if oj and nj:
             for d, cell in oj.items():
                 if d not in nj:
@@ -329,7 +401,10 @@ def _diff_baseline(old, new):
                 delta = nj[d]["score"] - cell["score"]
                 if delta == 0:
                     continue
-                if delta <= -(JUDGE_NOISE + 1):
+                if neg:
+                    notes.append("%s / Judge %s：%s → %s（负向对照故意写坏，裁判分数只作说明，不判退步/变好）"
+                                 % (cid, d, cell["score"], nj[d]["score"]))
+                elif delta <= -(JUDGE_NOISE + 1):
                     reg.append("%s / Judge %s：%s → %s（降幅超过 ±%d 抖动，判退步）"
                                % (cid, d, cell["score"], nj[d]["score"], JUDGE_NOISE))
                 elif delta < 0:
@@ -394,12 +469,15 @@ def extract_json(text):
     return json.loads(text[text.find("{"):text.rfind("}") + 1])
 
 
-def build_judge_prompt(fixture, output, cfg, points=None, rule_findings=None):
+def build_judge_prompt(fixture, output, cfg, points=None, rule_findings=None, facts=None):
     """拼裁判 prompt（独立成函数，便于零 key 自测锁住评分标准文本，见 tests）。
 
     points：评测集给定的变更点清单（ground truth），注入后裁判只核对这份清单、不自己拆；
     rule_findings：规则通道已检出的违规明细，作为确定性事实注入，裁判不得否认
-    （v4 实测：小模型会自己编核对结论、还会断言"优先级使用 P0/P1/P2"而产物写的是"高/中"，见 bc-0005）。
+    （v4 实测：小模型会自己编核对结论、还会断言"优先级使用 P0/P1/P2"而产物写的是"高/中"，见 bc-0005）；
+    facts：规则通道**确认无问题**的机械事实（列结构、变更点→用例映射、产出里的抽象指代）。
+    v8 实测仅靠措辞仍压不住编造（bc-0011 照样说"列数错误"、bc-0010 照样编缺口），
+    所以把"机器已经查明没有"也当成既定事实写进去——这是 v5"不让裁判自己算"的延伸。
     """
     dims = cfg["dimensions"]
     dim_lines = "\n".join("- %s：%s" % (d, DIM_DEFS.get(d, "按维度名含义评审")) for d in dims)
@@ -416,6 +494,9 @@ def build_judge_prompt(fixture, output, cfg, points=None, rule_findings=None):
                       + "\n".join("- %s" % f for f in rule_findings))
     else:
         blocks.append("【规则通道已检出的确定性违规】\n- 无（8 条规则全部通过）")
+    if facts:
+        blocks.append("【规则通道确认无问题的机械事实（同样不可推翻，reason 不得与之矛盾）】\n"
+                      + "\n".join("- %s" % f for f in facts))
     return (
         "你是严格的测试用例质量评审员。对照需求原文评审用例产出，按 1-5 分打分"
         "（5=完全满足，4=少量可接受瑕疵，3=明显问题，2=严重问题，1=完全不符）。\n"
@@ -431,17 +512,24 @@ def build_judge_prompt(fixture, output, cfg, points=None, rule_findings=None):
         "coverage 与 consistency 均不得给 4 分以上；其中若列出 no_secrets（虚构凭证/内网地址），"
         "hallucination 不得给 3 分以上。承认事实却重新定义口径（\"这是格式问题不是内容问题\"）"
         "不免除上限；反之，抽象指代（\"账号 A\"、\"某用户\"、\"XX 门店\"）不算虚构，"
-        "不得据此把 hallucination 压到 3 分以下。\n"
+        "不得据此把 hallucination 压到 3 分以下——判断标准是\"这个值能不能被核验/能不能直接拿去登录\"，"
+        "不是\"有没有出现在举例词表里\"。\n"
         "6. reason 必须落到具体证据（哪条用例、哪个变更点、缺什么场景），"
-        "禁止写\"覆盖全面\"\"符合要求\"这类没有证据的结论；也禁止编造清单里没有的变更点。\n"
+        "禁止写\"覆盖全面\"\"符合要求\"这类没有证据的结论；也禁止编造清单里没有的变更点。"
+        "声称 coverage 有缺口前，先写出该变更点已有的用例/场景（点名编号或名称）再写缺什么。\n"
+        "7. 「实际结果」列记录的是执行阶段的产品缺陷、执行数据或截图路径，那是指被测产品的问题或执行证据，"
+        "不是用例自身的格式错误/内容不一致，不得据此扣分；判列数/表头/字段错位前先看规则通道的 "
+        "format_columns，规则没报就不得凭空认定\"列数错误\"。**规则通道没有列出 format_columns 时，"
+        "reason 里禁止出现\"列数/缺列/表头/表格结构\"这些说法**——那不是核对，是编造；"
+        "此时若认为 consistency 有问题，必须引用具体用例的文字（哪条用例的哪个字段前后矛盾）。\n"
         "只输出 JSON，格式 {\"维度名\": {\"score\": 数字, \"reason\": \"一句话理由\"}}。\n\n"
         "%s\n\n【需求原文】\n%s\n\n【用例产出】\n%s"
         % (dim_lines, "\n\n".join(blocks), fixture, output))
 
 
-def judge(fixture, output, cfg, model, base, key, points=None, rule_findings=None):
+def judge(fixture, output, cfg, model, base, key, points=None, rule_findings=None, facts=None):
     dims = cfg["dimensions"]
-    prompt = build_judge_prompt(fixture, output, cfg, points, rule_findings)
+    prompt = build_judge_prompt(fixture, output, cfg, points, rule_findings, facts)
     raw = llm_chat([{"role": "user", "content": prompt}], model, base, key)
     scores = extract_json(raw)
     for d in dims:
@@ -455,7 +543,7 @@ JUDGE_SPREAD_ALERT = 2
 
 
 def judge_repeated(fixture, output, cfg, model, base, key,
-                   points=None, rule_findings=None, runs=1):
+                   points=None, rule_findings=None, runs=1, facts=None):
     """对同一份产出连续调 runs 次裁判，返回 (每轮分数列表, 每轮说明列表)。
 
     单轮失败不中断也不补分：那一轮记 None + 失败原因，稳定性只按成功的轮次算，
@@ -464,7 +552,8 @@ def judge_repeated(fixture, output, cfg, model, base, key,
     scores, notes = [], []
     for i in range(max(1, int(runs))):
         try:
-            scores.append(judge(fixture, output, cfg, model, base, key, points, rule_findings))
+            scores.append(judge(fixture, output, cfg, model, base, key,
+                                points, rule_findings, facts))
             notes.append("run%d ok" % (i + 1))
         except Exception as e:
             scores.append(None)
@@ -966,13 +1055,15 @@ def main():
         points = (cfg.get("change_points") or {}).get(case["fixture"])
         findings = ["%s / %s：%s" % (case["id"], rule, msg)
                     for rule in RULES for msg in violations[rule]]
+        # v8：把"机器确认没问题"的事实也注进去，压住编造缺口/编造列数错误
+        facts = machine_facts(output, violations, points)
 
         judge_scores, judge_note = None, "skipped（无 API key，仅规则通道）"
         judge_runs, stability = [], None
         if key:
             # --runs N：同一产出重复评 N 轮，第 1 轮成功的分数即上表 Judge 列（保持与历史报告可比）
             judge_runs, run_notes = judge_repeated(fixture, output, jcfg, judge_model, base, key,
-                                                   points, findings, args.runs)
+                                                   points, findings, args.runs, facts)
             judge_scores = next((r for r in judge_runs if isinstance(r, dict)), None)
             failed = [n for n in run_notes if "error" in n]
             if judge_scores is None:

@@ -59,7 +59,7 @@ Always respond in the user's language.
 | Grade a specific unregistered file | `--scan` (or `--scan-root`) first for structure | content grading (coverage/judge) needs registration: `--add CASE.md --fixture REQ.md --points ①②`, see evals/README scenario 2 |
 | Register my own case | `python3 evals/evaluate.py --add CASE.md --fixture REQ.md --points ①②` | copies the fixture, appends to cases.yaml preserving comments; remind the user to desensitize (public repo) |
 | AI writes cases, then grades | `python3 evals/evaluate.py --live` | needs a key; simplified (text only, no prototypes/DB) |
-| Compare two runs (prompt/model regression) | `python3 evals/evaluate.py --diff OLD.json NEW.json` | per-case per-rule better/worse; judge ±1 single-dim change = noise, drop ≥2 = regression; exit 1 on regressions; scan reports comparable too, but never baseline-vs-scan |
+| Compare two runs (prompt/model regression) | `python3 evals/evaluate.py --diff OLD.json NEW.json` | per-case per-rule better/worse; judge ±1 single-dim change = noise, drop ≥2 = regression; negative-control judge score moves go to the notes bucket only (deliberately broken samples, not the SUT); exit 1 on regressions; scan reports comparable too, but never baseline-vs-scan |
 | A/B prompt regression, one command | `bash evals/ab-demo.sh` | needs a key; `--live` with the production prompt (A) vs the deliberately weakened `evals/prompts/variant-b-weakened.md` (B), then `--diff`; exit 1 = regressions found; resumable, `FORCE=1` re-runs both; artifacts in `evals/ab-demo/` |
 | Audit judge reliability on archived reports | `python3 evals/evaluate.py --judge-agreement REPORT.json ...` | zero key, pure offline recompute; contradiction rate = judge scored above the cap the rule channel allows (`CONTRACT_CAPS`); judge-not-run cases count as uncheckable and never enter the denominator; exit always 0 (diagnostic, not a gate) |
 | Measure judge stability | `python3 evals/evaluate.py --runs 3` | needs a key; grades the same output N times and reports pass@N, per-dimension min~max/spread, and verdict flips; spread ≥2 = unstable (±1 is known noise); diagnostic only — never affects the exit code; a failed round is counted, never back-filled |
@@ -96,6 +96,11 @@ output (blocking items only).
   means the judge is overriding facts the rules already settled — which is exactly why the
   gate trusts the rule channel. It is NOT the judge-human agreement rate; that still needs
   sampled re-review recorded in `calibration.yaml`.
+- When the user authorizes bulk adjudication ("按我的口径全部批完"), you may apply their stated
+  rule item by item (`calibration.yaml` cal-0004 is the precedent: rule evidence + cap → agree;
+  cap violated / fabricated evidence → disagree). But write the mechanism in `reviewer` and
+  `note` ("授权代批，未逐项阅读"), never as "human reviewed item by item"; scores with no rule
+  evidence stay unjudged; and never merge 代批 with genuine human records into one agreement rate.
 - Since v6 `hallucination` is bound to the `no_secrets` rule finding: if the rules list a
   fabricated credential/intranet address, the score must be ≤2 and the reason must admit that
   row. A judge that scores it high, or writes "nothing fabricated", is a bc-0007-pattern badcase.
@@ -106,6 +111,17 @@ output (blocking items only).
   "store XX") — while any concrete account name / plaintext password / IP / domain still counts as
   fabricated (bc-0009, without undoing bc-0007). If a judge reason still uses either escape,
   that is evidence the rubric wording is not being obeyed — draft a badcase, don't tune the score.
+- Since v8 the judge prompt also carries machine facts (`machine_facts()`): a "no column problems
+  detected" declaration when `format_columns` passes, a change-point → case-name mapping, and the
+  abstract references actually present in the output. Do not add your own facts to the prompt:
+  every injected fact must come from a deterministic check, or it just becomes another hallucination.
+- Since v8 the rubric asks the judge to act rather than recite: `hallucination` judges by asking
+  "could this value be used to log in / reach a real record?" (the word list is only an example),
+  and `coverage` must name the cases already covering a change point before claiming a gap
+  (bc-0010). A v8 keyed run showed both fixes working but **diluting cap adherence**
+  (contradictions 0/14 → 1/14 → 2/14, bc-0012 — a judge wrote "the priority column contains 'P5'"
+  and still scored consistency 4). Treat more prompt text as a spent lever: the next fix for caps is
+  a code-side `score = min(score, cap)` truncation, not another paragraph.
 - `--runs N` (stability) → report pass@N and the flip list, not just the means: a case whose
   verdict flips between rounds must never be presented as "judge says pass". Unstable dimensions
   (spread ≥2) go to human re-review; the rule channel is unaffected by design. A negative control
